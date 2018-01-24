@@ -1,227 +1,69 @@
 import tensorflow as tf
+import facetools.faceutils as fu
+from facetools.dataset import DatasetReader
 import cv2
 import numpy as np
-import random
-import solver
-import time
-from multiprocessing.dummy import Pool as ThreadPool
-from multiprocessing import Pool
+from scipy import misc
+import config 
+  
+def random_rotate_image(image,lowangle,highangle):
+	angle = np.random.uniform(lowangle,highangle)
+	return misc.imrotate(image, angle, 'bicubic') 
+
+def resize_image(image,resize_w,resize_h):
+	image=cv2.resize(image,(resize_w,resize_h))
+	return image
+
+def cvtcolor_image(image):
+	image=cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
+	return image
+
+def GetPathsandLabels():
+
+	dataset=DatasetReader(config.train_dir)
+	img_paths,labels=dataset.paths_and_labels()
+
+	img_paths = tf.cast(img_paths, tf.string)
+	labels = tf.cast(labels, tf.int32)
 
 
-class input_data() :
+	input_queue=tf.train.slice_input_producer([img_paths,labels],config.epochs)
+	value=tf.read_file(input_queue[0])
+	image=tf.image.decode_image(value,channels=3)
+	labels=input_queue[1]
 
-	def __init__(self,file_path):
+	if config.train_input_channel==1:
+		image = tf.py_func(cvtcolor_image, [image], tf.uint8)
 
-		self.label_list=[]
-		self.img_list=[]
-		self.total_file_cnt=0
-		self.cur_file_pos=0
-
-		print "loading data"
-		path_file=open(file_path)
-		for line in  path_file.readlines():
-			line=line[:-1]
-			img_path=line.split(' ')[0]
-			img_label=int(line.split(' ')[1])
-
-
-			self.img_list.append(img_path)
-			self.label_list.append(img_label)
-			
-		self.all_data_array = np.array([self.img_list, self.label_list])
-		self.all_data_array = self.all_data_array.transpose()
-		np.random.shuffle(self.all_data_array)
-
-		self.total_file_cnt=self.all_data_array.shape[0]
-		self.cur_file_pos=0
-
-		print "total:%d"%self.total_file_cnt
-
-
-	
-	def next_batch(self,batch_size=solver.train_batch_size,img_width=solver.train_input_width,img_height=solver.train_input_height,img_channel=solver.train_input_channel):
-		
-		start_pos=self.cur_file_pos
-		end_pos=0
-
-		if (start_pos+batch_size)<self.total_file_cnt:
-			end_pos=start_pos+batch_size
-			self.cur_file_pos+=batch_size
-			
-			img_result=np.zeros( (batch_size,solver.train_input_width,solver.train_input_height,solver.train_input_channel),dtype=np.float32 )
-			output_data=self.all_data_array[start_pos:end_pos]
-
-			for i in range(batch_size):
-				tmp_img=cv2.imread(output_data[i,0],0 )
-				tmp_img=cv2.resize(tmp_img,(img_width,img_height))
-				tmp_img=tmp_img.astype(np.float32)
-				tmp_img=tmp_img/255
-				img_result[i,...,0]=tmp_img
-
-
-			label_result=output_data[...,1]
-			label_result=label_result.astype(np.int32)
-
-			return img_result, label_result
-		
+	if config.random_crop==1:
+		if(config.train_input_channel==1):
+			image = tf.random_crop(image, [config.crop_width, config.crop_height])
 		else:
-			np.random.shuffle(self.all_data_array)
-			self.cur_file_pos=0
-			start_pos=self.cur_file_pos
-			end_pos=start_pos+batch_size
-			self.cur_file_pos+=batch_size
+			image = tf.random_crop(image, [config.crop_width, config.crop_height,config.train_input_channel])
+		config.train_input_width=config.crop_width
+		config.train_input_height=config.crop_height
 
-			img_result=np.zeros( (batch_size,solver.train_input_width,solver.train_input_height,solver.train_input_channel),dtype=np.float32 )
-			output_data=self.all_data_array[start_pos:end_pos]
+	if  config.resize_image==1:
+		image = tf.py_func(resize_image, [image,config.train_input_width,config.train_input_height], tf.uint8)
 
-			for i in range(batch_size):
-				tmp_img=cv2.imread(output_data[i,0],0 )
-				tmp_img=cv2.resize(tmp_img,(img_width,img_height))
-				tmp_img=tmp_img.astype(np.float32)
-				tmp_img=tmp_img/255
-				img_result[i,...,0]=tmp_img
+	if config.random_flip==1:
+		image = tf.image.random_flip_left_right(image)
 
+	if config.random_rotate==1:
+		image = tf.py_func(random_rotate_image, [image,config.rotate_angle_range[0],config.rotate_angle_range[1]], tf.uint8)
 
-			label_result=output_data[...,1]
-			label_result=label_result.astype(np.int32)
+	if config.train_input_channel==1:
+		image.set_shape((config.train_input_width,config.train_input_height))
+	else :
+		image.set_shape((config.train_input_width,config.train_input_height,config.train_input_channel))
 
-			return img_result, label_result #shape : [batch_size,img_width,img_height,img_channel]
+	min_after_dequeue = 1000  
+	capacity = min_after_dequeue + config.train_batch_size  
 
+	image_batch,label_batch=tf.train.shuffle_batch([image,labels],batch_size=config.train_batch_size,num_threads= 10,capacity = capacity,min_after_dequeue=min_after_dequeue)
+	image_batch = tf.cast(image_batch, tf.float32)
+	label_batch = tf.reshape(label_batch, [config.train_batch_size])
 
-	def get_all_data_by_batchs(self,batch_size=solver.test_batch_size,img_width=solver.test_input_width,img_height=solver.test_input_height,img_channel=solver.test_input_channel):
-
-		div_cnt=self.total_file_cnt/batch_size
-		print div_cnt
-
-
-		img_result=np.zeros( (div_cnt,batch_size,img_width,img_height,img_channel),dtype=np.float32 )
-
-		for x in range(div_cnt):
-			for  y in range(batch_size):
-				tmp_img=cv2.imread(self.all_data_array[x*batch_size+y,0],0 )
-				tmp_img=cv2.resize(tmp_img,(solver.test_input_width,solver.test_input_height))
-				tmp_img=tmp_img.astype(np.float32)
-				tmp_img=tmp_img/255
-				img_result[x,y,...,0]=tmp_img
-
-
-		label_result=np.zeros( (div_cnt,batch_size),dtype=np.float32 )
-		for x in range(div_cnt):
-			for  y in range(batch_size):
-				label_result[x,y]=self.all_data_array[x*batch_size+y,1]
-		
-		label_result=label_result.astype(np.int32)
-
-		return img_result, label_result  #return shape : [batchs,batch_size,img_width,img_height,img_channel]
-		
-
-
-class input_data_thread() :
-
-	def __init__(self,file_path):
-
-		self.label_list=[]
-		self.img_list=[]
-		self.total_file_cnt=0
-		self.cur_file_pos=0
-
-		print "loading data"
-		path_file=open(file_path)
-		for line in  path_file.readlines():
-			line=line[:-1]
-			img_path=line.split(' ')[0]
-			img_label=int(line.split(' ')[1])
-
-
-			self.img_list.append(img_path)
-			self.label_list.append(img_label)
-			
-		self.all_data_array = np.array([self.img_list, self.label_list])
-		self.all_data_array = self.all_data_array.transpose()
-		np.random.shuffle(self.all_data_array)
-
-		self.total_file_cnt=self.all_data_array.shape[0]
-		self.cur_file_pos=0
-
-		print "total:%d"%self.total_file_cnt
-
-
-	def read_img_to_list(self,path_and_label):
-		tmp_img=cv2.imread(path_and_label[1],0 )
-		tmp_img=tmp_img.astype(np.float32)
-		tmp_img=tmp_img/255
-		self.img_result[ path_and_label[0],...,0]=tmp_img
-
-
-
-	def next_batch(self,batch_size):
-		self.thread_deal_list=[]
-		start_pos=self.cur_file_pos
-		end_pos=0
-
-		if (start_pos+batch_size)<self.total_file_cnt:
-			end_pos=start_pos+batch_size
-			self.cur_file_pos+=batch_size
-			
-			self.img_result=np.zeros( (batch_size,solver.train_input_width,solver.train_input_height,solver.train_input_channel),dtype=np.float32 )
-			output_data=self.all_data_array[start_pos:end_pos]
-
-			label_result=output_data[...,1]
-			label_result=label_result.astype(np.int32)
-
-
-			output_data=list(output_data)
-
-			for index,i in enumerate(output_data):
-				self.thread_deal_list.append( (index,i[0],int(i[1]) ) )
-
-			if(batch_size<=1000):
-				max_pool=batch_size
-			else:
-				max_pool=1000
-			pool = ThreadPool(max_pool)
-			return_data = pool.map(self.read_img_to_list, self.thread_deal_list)
-			pool.close()
-			pool.join()
-
-
-			return self.img_result, label_result
-
-
-	def all_data_by_batch(self,batch_size):
-		self.thread_deal_list=[]
-		div_cnt=self.total_file_cnt/batch_size
-		print div_cnt
-		#img_result=np.zeros( (div_cnt,batch_size,solver.train_input_width,solver.train_input_height,solver.train_input_channel),dtype=np.float32 )
-
-		for index,i in enumerate(self.all_data_array):
-					self.thread_deal_list.append( (index,i[0],int(i[1]) ) )
-
-
-		if(batch_size<=1000):
-			max_pool=batch_size
-		else:
-			max_pool=1000
-		pool = ThreadPool(max_pool)
-		return_data = pool.map(self.read_img_to_list, self.thread_deal_list)
-		pool.close()
-		pool.join()
-
-
-	
-
-if __name__ =="__main__":
-
-	start=time.time()
-	test=input_data("test_list.txt")
-	a,b=test.test_all_data(64)
-	end=time.time()
-	print "use time:%d"%(end-start)
-	print a.shape 
-	print b.shape
-	print a.dtype
-	print b.dtype
-	print b[0,0]
-	print b.shape[0]
-	cv2.imshow("fs",a[0,0,...,0])
-	cv2.waitKey(0)
+	return image_batch,label_batch
+if __name__ == '__main__':
+	GetPathsandLabels(["/home/hanson/dataset/test_align_144x144"])
