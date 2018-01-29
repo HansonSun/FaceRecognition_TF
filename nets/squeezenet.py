@@ -23,7 +23,7 @@ def expand(inputs, num_outputs):
         e3x3 = slim.conv2d(inputs, num_outputs, [3, 3], scope='3x3')
     return tf.concat([e1x1, e3x3], 3)
 
-def inference(images, keep_probability, phase_train=True, bottleneck_layer_size=128, weight_decay=0.0, reuse=None):
+def inference(images, keep_probability=0.7, phase_train=True, bottleneck_layer_size=128, weight_decay=0.0, reuse=None):
     batch_norm_params = {
         # Decay for the moving averages.
         'decay': 0.995,
@@ -56,8 +56,8 @@ def inference(images, keep_probability, phase_train=True, bottleneck_layer_size=
                 net = fire_module(net, 64, 256, scope='fire9')
                 net = slim.dropout(net, keep_probability)
                 net = slim.conv2d(net, 1000, [1, 1], activation_fn=None, normalizer_fn=None, scope='conv10')
-                net = slim.avg_pool2d(net, net.get_shape()[1:3], scope='avgpool10')
-                net = tf.squeeze(net, [1, 2], name='logits')
-                net = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None, 
-                        scope='Bottleneck', reuse=False)
-    return net, None
+                #net = slim.avg_pool2d(net, net.get_shape()[1:3], scope='avgpool10')
+                #net = tf.squeeze(net, [1, 2], name='logits')
+                net = slim.flatten(net)
+                net = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None, scope='Bottleneck', reuse=False)
+    return net

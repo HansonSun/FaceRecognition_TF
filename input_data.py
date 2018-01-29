@@ -20,7 +20,7 @@ def cvtcolor_image(image):
 
 def GetPathsandLabels():
 
-	dataset=DatasetReader(config.train_dir)
+	dataset=DatasetReader(config.training_dateset)
 	img_paths,labels=dataset.paths_and_labels()
 
 	img_paths = tf.cast(img_paths, tf.string)
@@ -64,6 +64,6 @@ def GetPathsandLabels():
 	image_batch = tf.cast(image_batch, tf.float32)
 	label_batch = tf.reshape(label_batch, [config.train_batch_size])
 
-	return image_batch,label_batch
+	return image_batch,label_batch,dataset.total_identity
 if __name__ == '__main__':
 	GetPathsandLabels(["/home/hanson/dataset/test_align_144x144"])
