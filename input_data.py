@@ -18,9 +18,9 @@ def cvtcolor_image(image):
 	image=cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
 	return image
 
-def GetPathsandLabels():
+def GetPathsandLabels(datasetpath):
 
-	dataset=DatasetReader(config.training_dateset)
+	dataset=DatasetReader(datasetpath)
 	img_paths,labels=dataset.paths_and_labels()
 
 	img_paths = tf.cast(img_paths, tf.string)

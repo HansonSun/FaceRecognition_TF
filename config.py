@@ -4,12 +4,12 @@ import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list
 training_dateset = ["/home/hanson/dataset/CASIA/CASIA-WebFace_align_128x128"]
-train_batch_size=64
+train_batch_size=128
 train_input_width=128
 train_input_height=128
 train_input_channel=3
 #max epochs
-epochs=100000
+epochs=1000
 display_iter=10
 max_iter=1000000
 snapshot=1000
@@ -29,8 +29,8 @@ test_interval= 1000
 
 
 ##--------------------hyper parameter---------------------------##
-base_lr=0.01
-decay_step=10000
+learning_rate=0.001
+decay_step=1000
 decay_rate=0.96
 # optimizer func
 optimizer_list=['ADAGRAD','ADADELTA','ADAM','RMSPROP','MOM']
@@ -52,3 +52,8 @@ random_flip=0
 resize_image=0
 ##----------------------------------------------------------------##
 
+
+##-----------------------center loss------------------------------##
+centerloss_lambda=1e-2
+centerloss_alpha=0.5
+##----------------------------------------------------------------##
