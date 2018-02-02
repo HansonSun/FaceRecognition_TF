@@ -12,53 +12,6 @@ import tensorflow.contrib.slim as slim
 import time
 import lossfunc
 
-'''
-def train(total_loss, global_step, optimizer, learning_rate, moving_average_decay, update_gradient_vars, log_histograms=True):
-    # Generate moving averages of all losses and associated summaries.
-    loss_averages_op = _add_loss_summaries(total_loss)
-
-    # Compute gradients.
-    with tf.control_dependencies([loss_averages_op]):
-        if optimizer=='ADAGRAD':
-            opt = tf.train.AdagradOptimizer(learning_rate)
-        elif optimizer=='ADADELTA':
-            opt = tf.train.AdadeltaOptimizer(learning_rate, rho=0.9, epsilon=1e-6)
-        elif optimizer=='ADAM':
-            opt = tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999, epsilon=0.1)
-        elif optimizer=='RMSPROP':
-            opt = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=1.0)
-        elif optimizer=='MOM':
-            opt = tf.train.MomentumOptimizer(learning_rate, 0.9, use_nesterov=True)
-        else:
-            raise ValueError('Invalid optimization algorithm')
-    
-        grads = opt.compute_gradients(total_loss, update_gradient_vars)
-        
-    # Apply gradients.
-    apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
-  
-    # Add histograms for trainable variables.
-    if log_histograms:
-        for var in tf.trainable_variables():
-            tf.summary.histogram(var.op.name, var)
-   
-    # Add histograms for gradients.
-    if log_histograms:
-        for grad, var in grads:
-            if grad is not None:
-                tf.summary.histogram(var.op.name + '/gradients', grad)
-  
-    # Track the moving averages of all trainable variables.
-    variable_averages = tf.train.ExponentialMovingAverage(
-        moving_average_decay, global_step)
-    variables_averages_op = variable_averages.apply(tf.trainable_variables())
-  
-    with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
-        train_op = tf.no_op(name='train')
-  
-    return train_op
-
-'''
 
 def trainning(loss,learning_rate,global_step):
 
@@ -69,22 +22,26 @@ def trainning(loss,learning_rate,global_step):
 
 def run_training():
     
-    image_batch,label_batch,class_num = input_data.GetPathsandLabels( config.training_dateset ) 
-
+    image_batch,label_batch,class_num = input_data.GetPLFromCsv( config.training_dateset ) 
     phase_train_placeholder = tf.placeholder(tf.bool, name='phase_train')     
     #load model
     network = importlib.import_module("lightcnn_b")
-    prelogits = network.inference(image_batch)
+
+    image_batch = tf.identity(image_batch, 'input')
+
+    prelogits = network.inference(image_batch,is_training=phase_train_placeholder)
 
     logits = slim.fully_connected(prelogits, class_num, activation_fn=None, 
                     weights_initializer=tf.truncated_normal_initializer(stddev=0.1), 
                     weights_regularizer=slim.l2_regularizer(5e-5),
                     scope='Logits', reuse=False)
+
+    embeddings = tf.nn.l2_normalize(prelogits, 1, 1e-10, name='embeddings')
+
     predict_labels=tf.argmax(logits,1)
 
     global_step = tf.Variable(0, trainable=False)
     learning_rate = tf.train.exponential_decay(config.learning_rate,global_step,config.decay_step,config.decay_rate,staircase=True)
-
 
     centerloss, _ = lossfunc.center_loss(prelogits, label_batch, config.centerloss_alpha, class_num)
 
@@ -118,7 +75,7 @@ def run_training():
                 if coord.should_stop():
                     break
                 start_time=time.time()
-                lr,train_loss,_,pre_labels,real_labels = sess.run([learning_rate,total_loss,train_op,predict_labels,label_batch])
+                lr,train_loss,_,pre_labels,real_labels = sess.run([learning_rate,total_loss,train_op,predict_labels,label_batch],feed_dict={phase_train_placeholder:True})
                 end_time=time.time()
                 iter+=1
                 use_time+=(end_time-start_time)

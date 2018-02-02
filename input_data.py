@@ -1,6 +1,6 @@
 import tensorflow as tf
 import facetools.faceutils as fu
-from facetools.dataset import DatasetReader
+from facetools.dataset import *
 import cv2
 import numpy as np
 from scipy import misc
@@ -18,9 +18,9 @@ def cvtcolor_image(image):
 	image=cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
 	return image
 
-def GetPathsandLabels(datasetpath):
+def GetPLFromImg(datasetpath):
 
-	dataset=DatasetReader(datasetpath)
+	dataset=fileDatasetReader(datasetpath)
 	img_paths,labels=dataset.paths_and_labels()
 
 	img_paths = tf.cast(img_paths, tf.string)
@@ -65,5 +65,83 @@ def GetPathsandLabels(datasetpath):
 	label_batch = tf.reshape(label_batch, [config.train_batch_size])
 
 	return image_batch,label_batch,dataset.total_identity
+
+
+def GetPLFromCsv(datasetpath):
+
+    dataset=fileDatasetReader(datasetpath)
+    csvpath=dataset.save2csv(shuffle=1)
+
+    filename_queue=tf.train.string_input_producer([csvpath],config.epochs)
+
+    reader = tf.TextLineReader()
+    key,value = reader.read(filename_queue)
+    record_defaults = [[""], [1]] 
+    imgpath, label = tf.decode_csv(value, record_defaults=record_defaults) 
+
+    value=tf.read_file(imgpath)
+    image=tf.image.decode_image(value,channels=3)
+
+    if config.train_input_channel==1:
+        image = tf.py_func(cvtcolor_image, [image], tf.uint8)
+
+    if config.random_crop==1:
+        if(config.train_input_channel==1):
+            image = tf.random_crop(image, [config.crop_width, config.crop_height])
+        else:
+            image = tf.random_crop(image, [config.crop_width, config.crop_height,config.train_input_channel])
+        config.train_input_width=config.crop_width
+        config.train_input_height=config.crop_height
+
+    image = tf.py_func(resize_image, [image,config.train_input_width,config.train_input_height], tf.uint8)
+
+    if config.random_flip==1:
+        image = tf.image.random_flip_left_right(image)
+
+    if config.random_rotate==1:
+        image = tf.py_func(random_rotate_image, [image,config.rotate_angle_range[0],config.rotate_angle_range[1]], tf.uint8)
+
+    if config.train_input_channel==1:
+        image.set_shape((config.train_input_width,config.train_input_height))
+    else :
+        image.set_shape((config.train_input_width,config.train_input_height,config.train_input_channel))
+
+    if config.random_crop==1:
+        image=tf.random_crop(image,size=( config.train_input_width,config.train_input_height,config.train_input_channel) )
+
+
+    min_after_dequeue = 1000  
+    capacity = min_after_dequeue + config.train_batch_size  
+
+    image_batch,label_batch=tf.train.shuffle_batch([image,label],batch_size=config.train_batch_size,num_threads= 10,capacity = capacity,
+    	min_after_dequeue=min_after_dequeue,allow_smaller_final_batch=True)
+    image_batch = tf.cast(image_batch, tf.float32)
+    label_batch = tf.reshape(label_batch, [config.train_batch_size])
+
+    return image_batch,label_batch,dataset.total_identity
+
+  
+def runtest():
+    image_batch,label_batch,_=GetPLFromCsv( ["/home/hanson/dataset/test_align_144x144"] )
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        coord=tf.train.Coordinator()
+        thread=tf.train.start_queue_runners(sess=sess,coord=coord)
+
+        try:
+            while(1):
+                results=sess.run(image_batch)
+                for i in results:
+                    i=i.astype(np.uint8)
+                    i=cv2.cvtColor(i,cv2.COLOR_RGB2BGR)
+                    cv2.imshow("fd",i)
+                    cv2.waitKey(0)
+
+        except tf.errors.OutOfRangeError:
+            print('Done training -- epoch limit reached')
+        finally:
+            coord.request_stop()
+
 if __name__ == '__main__':
-	GetPathsandLabels(["/home/hanson/dataset/test_align_144x144"])
+    runtest()
