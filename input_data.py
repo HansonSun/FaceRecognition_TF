@@ -82,47 +82,69 @@ def GetPLFromCsv(datasetpath):
     value=tf.read_file(imgpath)
     image=tf.image.decode_image(value,channels=3)
 
+    #convert the color
     if config.train_input_channel==1:
         image = tf.py_func(cvtcolor_image, [image], tf.uint8)
 
+     #resize the image
+    image = tf.py_func(resize_image, [image,config.train_input_width,config.train_input_height], tf.uint8)
+
+    #random crop the image
     if config.random_crop==1:
         if(config.train_input_channel==1):
-            image = tf.random_crop(image, [config.crop_width, config.crop_height])
+            image = tf.random_crop(image, [config.crop_height,config.crop_width])
         else:
-            image = tf.random_crop(image, [config.crop_width, config.crop_height,config.train_input_channel])
+            image = tf.random_crop(image, [config.crop_height, config.crop_width,config.train_input_channel])
         config.train_input_width=config.crop_width
         config.train_input_height=config.crop_height
 
-    image = tf.py_func(resize_image, [image,config.train_input_width,config.train_input_height], tf.uint8)
 
+    #random the image
     if config.random_flip==1:
         image = tf.image.random_flip_left_right(image)
 
+    #random rotate the image
     if config.random_rotate==1:
         image = tf.py_func(random_rotate_image, [image,config.rotate_angle_range[0],config.rotate_angle_range[1]], tf.uint8)
 
+    #random color brightness
+    if config.random_color_brightness==1:
+        image=tf.image.random_brightness(image,max_brightness)
+
+    #random color saturation
+    if config.random_color_saturation==1:
+        image=tf.image.random_saturation(image,lower=config.saturaton_range[0],upper=config.saturaton_range[1])
+
+    #random color hue
+    if config.random_color_hue==1:
+        image=tf.image.random_hue(image,max_hue)
+
+    #random color contrast 
+    if config.random_color_contrast==1:
+        image=tf.image.random_contrast(image,lower=config.contrast_range[0],upper=config.contrast_range[1])
+
+    #tell tf tensor's shape
     if config.train_input_channel==1:
-        image.set_shape((config.train_input_width,config.train_input_height))
+        image.set_shape((config.train_input_height,config.train_input_width))
     else :
-        image.set_shape((config.train_input_width,config.train_input_height,config.train_input_channel))
+        image.set_shape((config.train_input_height,config.train_input_width,config.train_input_channel))
 
-    if config.random_crop==1:
-        image=tf.random_crop(image,size=( config.train_input_width,config.train_input_height,config.train_input_channel) )
-
+    # standardize the image
+    image=tf.image.per_image_standardization(image)
 
     min_after_dequeue = 1000  
     capacity = min_after_dequeue + config.train_batch_size  
 
     image_batch,label_batch=tf.train.shuffle_batch([image,label],batch_size=config.train_batch_size,num_threads= 10,capacity = capacity,
-    	min_after_dequeue=min_after_dequeue,allow_smaller_final_batch=True)
+        min_after_dequeue=min_after_dequeue,allow_smaller_final_batch=True)
     image_batch = tf.cast(image_batch, tf.float32)
     label_batch = tf.reshape(label_batch, [config.train_batch_size])
 
-    return image_batch,label_batch,dataset.total_identity
+    return image_batch,label_batch,dataset.total_identity,dataset.total_img_num
 
   
-def runtest():
-    image_batch,label_batch,_=GetPLFromCsv( ["/home/hanson/dataset/test_align_144x144"] )
+def runtest(reader_func):
+    image_batch,label_batch,_=reader_func( ["/home/hanson/dataset/test_align_144x144"] )
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -144,4 +166,4 @@ def runtest():
             coord.request_stop()
 
 if __name__ == '__main__':
-    runtest()
+    runtest(GetPLFromCsv)

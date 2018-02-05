@@ -17,8 +17,6 @@ def inference(image,dropout_keep_prob=0.8,is_training=True,scope="inference"):
 		with slim.arg_scope([slim.conv2d, slim.fully_connected],activation_fn=None,
 						weights_initializer=slim.xavier_initializer_conv2d(uniform=True),
 						weights_regularizer=slim.l2_regularizer(0.1) ):
-			#scale
-			image=image/255
 			#conv1
 			net=slim.conv2d(image,96,[5,5],stride=1,scope="conv1",padding="SAME")
 			#MFM1

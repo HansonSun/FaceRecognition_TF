@@ -4,16 +4,18 @@ import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list
 training_dateset = ["/home/hanson/dataset/CASIA/CASIA-WebFace_align_128x128"]
-train_batch_size=2
-train_input_width=300
-train_input_height=300
-train_input_channel=3
+train_batch_size=64
+train_input_width=144
+train_input_height=144
+train_input_channel=3    #rgb:3  gray:1
 #max epochs
 epochs=1000
 display_iter=10
 max_iter=1000000
-snapshot=10
-saver_path="./model"
+snapshot=1000
+model_path="./model"
+log_path="./log"
+
 ##--------------------------------------------------------------##
 
 
@@ -41,17 +43,32 @@ optimizer=optimizer_list[0]
 ##---------------------Data Augment-----------------------------##
 #open random crop
 random_crop=1
-crop_width=50
-crop_height=50
+crop_width=128
+crop_height=128
+
 #random rotate
 random_rotate=0
 rotate_angle_range=[-90,90]
-#random flip 
-random_flip=0
-#resize image
-resize_image=0
-##----------------------------------------------------------------##
 
+#random flip 
+random_flip=1
+
+#random brigtness
+random_color_brightness=1
+max_brightness=90
+
+#random hue
+random_coloe_hue=0
+max_hue=0
+
+#random contrast 
+random_color_contrast=0
+contrast_range=[0.5,1.5]
+
+#random saturation
+random_color_saturation=0
+saturaton_range=[0.5,1.5]
+##----------------------------------------------------------------##
 
 ##-----------------------center loss------------------------------##
 centerloss_lambda=1e-2

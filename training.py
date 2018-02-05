@@ -13,6 +13,7 @@ import time
 import lossfunc
 
 
+
 def trainning(loss,learning_rate,global_step):
 
     optimizer = tf.train.AdamOptimizer(learning_rate)
@@ -22,33 +23,35 @@ def trainning(loss,learning_rate,global_step):
 
 def run_training():
     
-    image_batch,label_batch,class_num = input_data.GetPLFromCsv( config.training_dateset ) 
+    if not os.path.exists(config.log_path):   # Create the log directory if it doesn't exist
+        os.mkdir(config.log_path)
+    if not os.path.exists(config.model_path): # Create the log directory if it doesn't exist
+        os.mkdir(config.model_path)
+
+
+    image_batch,label_batch,class_num,total_img_num = input_data.GetPLFromCsv( config.training_dateset ) 
     phase_train_placeholder = tf.placeholder(tf.bool, name='phase_train')     
-    #load model
+    
+    #load model and inference
     network = importlib.import_module("lightcnn_b")
-
     image_batch = tf.identity(image_batch, 'input')
-
     prelogits = network.inference(image_batch,is_training=phase_train_placeholder)
-
     logits = slim.fully_connected(prelogits, class_num, activation_fn=None, 
                     weights_initializer=tf.truncated_normal_initializer(stddev=0.1), 
                     weights_regularizer=slim.l2_regularizer(5e-5),
                     scope='Logits', reuse=False)
-
     embeddings = tf.nn.l2_normalize(prelogits, 1, 1e-10, name='embeddings')
-
     predict_labels=tf.argmax(logits,1)
 
+
+    #adjust learning rate 
     global_step = tf.Variable(0, trainable=False)
     learning_rate = tf.train.exponential_decay(config.learning_rate,global_step,config.decay_step,config.decay_rate,staircase=True)
 
+    #cal loss and update
     centerloss, _ = lossfunc.center_loss(prelogits, label_batch, config.centerloss_alpha, class_num)
-
     softmaxloss = lossfunc.softmax_loss(logits, label_batch)  
-
     total_loss = softmaxloss + config.centerloss_lambda * centerloss
-
     train_op = trainning(total_loss,learning_rate,global_step)
 
     saver=tf.train.Saver(max_to_keep=50)
@@ -70,6 +73,8 @@ def run_training():
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
         iter=0
         use_time=0
+        display_loss=0
+        dispaly_acc=0
         try:
             for step in np.arange(config.max_iter):
                 if coord.should_stop():
@@ -79,12 +84,19 @@ def run_training():
                 end_time=time.time()
                 iter+=1
                 use_time+=(end_time-start_time)
-
+                display_loss+=train_loss
                 train_acc=np.equal(pre_labels,real_labels).mean()
+                dispaly_acc+=train_acc
 
                 if(iter%config.display_iter==0):
-                    print "iterator:%d lr:%f time:%f total_loss:%f acc:%.3f"%(iter,lr,use_time,train_loss,train_acc)
+                    epoch_scale=iter*config.train_batch_size*1.0/total_img_nu
+                    display_loss=display_loss/config.display_iter
+                    dispaly_acc=dispaly_acc/config.display_iter
+
+                    print "iterator:%d lr:%f time:%f total_loss:%f acc:%.3f epoch:%.3f"%(iter,lr,use_time,display_loss,dispaly_acc,epoch_scale)
                     use_time=0
+                    display_loss=0.0
+                    dispaly_acc=0.0
 
                 if (iter % config.snapshot==0): 
                     saver.save(sess, "model/recognize",global_step = iter)

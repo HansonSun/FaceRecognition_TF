@@ -12,7 +12,7 @@ def MFM(net):
 def inference(image):
 	with slim.arg_scope([slim.conv2d, slim.fully_connected],
 					weights_initializer=slim.xavier_initializer_conv2d(uniform=True),
-					weights_regularizer=slim.l2_regularizer(0.1) ):
+					weights_regularizer=slim.l2_regularizer(0.1),activation_fn=None ):
 		#conv1
 		net=slim.conv2d(image,96,[5,5],stride=1,scope="conv1",padding="SAME")
 		#MFM1
@@ -33,8 +33,10 @@ def inference(image):
 		#pool2
 		net=slim.max_pool2d(net,[2,2],stride=2,scope="pool2")
 		#conv3_x
-		net_conv3_x=slim.repeat(net,4,slim.conv2d,96,[3,3],scope="conv3_x",padding="SAME")
-		net = tf.concat([net, net_conv3_x], 2)
+		net_conv3_x_1=slim.repeat(net,2,slim.conv2d,96,[3,3],scope="conv3_x_1",padding="SAME")
+		net = tf.concat([net, net_conv3_x_1], 2)
+		net_conv3_x_2=slim.repeat(net,2,slim.conv2d,96,[3,3],scope="conv3_x_2",padding="SAME")
+		net = tf.concat([net, net_conv3_x_2], 2)
 		#conv3a
 		net=slim.conv2d(net,192,[1,1],stride=1,scope="conv3a",padding="SAME")
 		#MFM3a
@@ -46,8 +48,12 @@ def inference(image):
 		#pool3
 		net=slim.max_pool2d(net,[2,2],stride=2,scope="pool3")
 		#conv4_x
-		net_conv4_x=slim.repeat(net,6,slim.conv2d,192,[3,3],scope="conv4_x",padding="SAME")
-		net = tf.concat([net, net_conv4_x], 2)
+		net_conv4_x_1=slim.repeat(net,2,slim.conv2d,192,[3,3],scope="conv4_x_1",padding="SAME")
+		net = tf.concat([net, net_conv4_x_1], 2)
+		net_conv4_x_2=slim.repeat(net,2,slim.conv2d,192,[3,3],scope="conv4_x_2",padding="SAME")
+		net = tf.concat([net, net_conv4_x_2], 2)
+		net_conv4_x_3=slim.repeat(net,2,slim.conv2d,192,[3,3],scope="conv4_x_3",padding="SAME")
+		net = tf.concat([net, net_conv4_x_3], 2)
 		#conv4a
 		net=slim.conv2d(net,384,[1,1],stride=1,scope="conv4a")
 		#MFM4a
@@ -57,8 +63,14 @@ def inference(image):
 		#MFMF4
 		net=MFM(net)
 		#conv5_x
-		net_conv5_x=slim.repeat(net,8,slim.conv2d,128,[3,3],scope="conv5_x",padding="SAME")
-		net = tf.concat([net, net_conv5_x], 2)
+		net_conv5_x_1=slim.repeat(net,2,slim.conv2d,128,[3,3],scope="conv5_x_1",padding="SAME")
+		net = tf.concat([net, net_conv5_x_1], 2)
+		net_conv5_x_2=slim.repeat(net,2,slim.conv2d,128,[3,3],scope="conv5_x_2",padding="SsAME")
+		net = tf.concat([net, net_conv5_x_2], 2)
+		net_conv5_x_3=slim.repeat(net,2,slim.conv2d,128,[3,3],scope="conv5_x_3",padding="SAME")
+		net = tf.concat([net, net_conv5_x_3], 2)
+		net_conv5_x_4=slim.repeat(net,2,slim.conv2d,128,[3,3],scope="conv5_x_4",padding="SAME")
+		net = tf.concat([net, net_conv5_x_4], 2)
 		#conv5a
 		net=slim.conv2d(net,256,[1,1],stride=1,scope="conv5a")
 		#MFM5a

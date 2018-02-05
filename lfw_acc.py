@@ -28,6 +28,7 @@ class test():
         images = np.zeros((2, 128, 128, 3))
         for index,i in enumerate([path_l,path_r]):
             img=cv2.imread(i)
+            img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
             img=cv2.resize(img,(128,128))
             images[index,:,:,:] = img
 
@@ -38,6 +39,5 @@ class test():
         return  similarity
 
 demo=test()
-print demo.compare2face("75-1.jpg","75-2.jpg")
-#lfw=lfwreader("/home/hanson/valid_dataset/lfw_align_128x128")
-#lfw.get_result(demo)
+lfw=lfwreader("/home/hanson/valid_dataset/lfw_align_128x128",imgformat="jpg")
+lfw.get_result(demo)

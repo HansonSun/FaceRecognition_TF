@@ -11,7 +11,7 @@ def MFM(net):
 	return eltwise
 
 def inference(image):
-	with slim.arg_scope([slim.conv2d, slim.fully_connected],
+	with slim.arg_scope([slim.conv2d, slim.fully_connected],activation_fn=None,
 					weights_initializer=slim.xavier_initializer_conv2d(uniform=True),
 					weights_regularizer=slim.l2_regularizer(0.1) ):
 		#conv1
