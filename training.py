@@ -48,11 +48,23 @@ def run_training():
     global_step = tf.Variable(0, trainable=False)
     learning_rate = tf.train.exponential_decay(config.learning_rate,global_step,config.decay_step,config.decay_rate,staircase=True)
 
+
+    average_variables=tf.train.ExponentialMovingAverage(0.99,global_step)
+    average_variables_op = average_variables.apply(tf.trainable_variables())
+  
+
     #cal loss and update
     centerloss, _ = lossfunc.center_loss(prelogits, label_batch, config.centerloss_alpha, class_num)
     softmaxloss = lossfunc.softmax_loss(logits, label_batch)  
-    total_loss = softmaxloss + config.centerloss_lambda * centerloss
+    #regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    #total_loss=tf.add_n([softmaxloss,config.centerloss_lambda * centerloss]+regularization_losses,name='total_loss')
+    total_loss=softmaxloss+ config.centerloss_lambda * centerloss
     train_op = trainning(total_loss,learning_rate,global_step)
+
+
+    with tf.control_dependencies([train_op, average_variables_op]):
+        train_op = tf.no_op(name='train')
+
 
     saver=tf.train.Saver(max_to_keep=50)
 
@@ -89,11 +101,11 @@ def run_training():
                 dispaly_acc+=train_acc
 
                 if(iter%config.display_iter==0):
-                    epoch_scale=iter*config.train_batch_size*1.0/total_img_nu
+                    epoch_scale=iter*config.train_batch_size*1.0/total_img_num
                     display_loss=display_loss/config.display_iter
                     dispaly_acc=dispaly_acc/config.display_iter
 
-                    print "iterator:%d lr:%f time:%f total_loss:%f acc:%.3f epoch:%.3f"%(iter,lr,use_time,display_loss,dispaly_acc,epoch_scale)
+                    print "iterator:%d lr:%f time:%.3f total_loss:%.3f acc:%.3f epoch:%.3f"%(iter,lr,use_time,display_loss,dispaly_acc,epoch_scale)
                     use_time=0
                     display_loss=0.0
                     dispaly_acc=0.0

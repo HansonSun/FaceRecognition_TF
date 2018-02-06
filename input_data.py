@@ -109,7 +109,7 @@ def GetPLFromCsv(datasetpath):
 
     #random color brightness
     if config.random_color_brightness==1:
-        image=tf.image.random_brightness(image,max_brightness)
+        image=tf.image.random_brightness(image,config.max_brightness)
 
     #random color saturation
     if config.random_color_saturation==1:
@@ -117,7 +117,7 @@ def GetPLFromCsv(datasetpath):
 
     #random color hue
     if config.random_color_hue==1:
-        image=tf.image.random_hue(image,max_hue)
+        image=tf.image.random_hue(image,config.max_hue)
 
     #random color contrast 
     if config.random_color_contrast==1:
