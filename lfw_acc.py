@@ -16,12 +16,17 @@ class test():
             print ckpname
             saver = tf.train.import_meta_graph(ckpname+".meta")
             saver.restore(self.sess, ckpname )
-
             # Get input and output tensors
             self.images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")
             self.embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
             self.phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
 
+    def prewhiten(self,x):
+        mean = np.mean(x)
+        std = np.std(x)
+        std_adj = np.maximum(std, 1.0/np.sqrt(x.size))
+        y = np.multiply(np.subtract(x, mean), 1/std_adj)
+        return y 
 
     def compare2face(self,path_l,path_r):
 
@@ -30,7 +35,8 @@ class test():
             img=cv2.imread(i)
             img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
             img=cv2.resize(img,(128,128))
-            images[index,:,:,:] = img
+            img=img.astype(np.float32)
+            images[index,:,:,:] = self.prewhiten(img)
 
         feed_dict = { self.images_placeholder:images, self.phase_train_placeholder:False }
         result = self.sess.run(self.embeddings ,feed_dict=feed_dict)

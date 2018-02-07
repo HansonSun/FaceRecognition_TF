@@ -11,12 +11,12 @@ def MFM(net):
 	return eltwise
 
 
-def inference(image,dropout_keep_prob=0.8,is_training=True,scope="inference"):
-
+def inference(image,dropout_keep_prob=0.8,is_training=True,scope="inference",weight_decay=0.0):
+	end_poins=[]
 	with tf.variable_scope(scope, 'inference', [image]):
 		with slim.arg_scope([slim.conv2d, slim.fully_connected],activation_fn=None,
 						weights_initializer=slim.xavier_initializer_conv2d(uniform=True),
-						weights_regularizer=slim.l2_regularizer(0.1) ):
+						weights_regularizer=slim.l2_regularizer(weight_decay) ):
 			#conv1
 			net=slim.conv2d(image,96,[5,5],stride=1,scope="conv1",padding="SAME")
 			#MFM1
@@ -68,4 +68,4 @@ def inference(image,dropout_keep_prob=0.8,is_training=True,scope="inference"):
 			net=MFM(net)
 
 			net=slim.flatten(net)
-	return  net
+	return  net,end_poins

@@ -25,7 +25,7 @@ testing_dataset  = ["/home/hanson/dataset/test_align_128x128"]
 test_batch_size=128
 test_input_width=128
 test_input_height=128
-test_input_channel=1
+test_input_channel=3
 test_interval= 1000
 ##--------------------------------------------------------------##
 
@@ -38,7 +38,8 @@ decay_rate=0.96
 optimizer_list=['ADAGRAD','ADADELTA','ADAM','RMSPROP','MOM']
 optimizer=optimizer_list[0]
 
-moving_average_decay=0.9
+moving_average_decay=0.9999
+weight_decay=5e-5 
 ##--------------------------------------------------------------##
 
 
@@ -74,5 +75,5 @@ saturaton_range=[0.5,1.5]
 
 ##-----------------------center loss------------------------------##
 centerloss_lambda=0.003
-centerloss_alpha=0.5
+centerloss_alpha=0.9
 ##----------------------------------------------------------------##
