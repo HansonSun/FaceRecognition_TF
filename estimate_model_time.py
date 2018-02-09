@@ -39,6 +39,10 @@ def single_model_runtime(net,img_w,img_h,img_c,device="cpu"):
                     total_time+=(end_t-start_t)
             print "model:%s runtime:%.3f(ms) imgshape:(%d,%d,%d) device:%s"%(net,(total_time/9)*1000,img_w,img_h,img_c,device)
 
+def test_all_model(net_dir):
+    for net in os.listdir(net_dir):
+        if net.endswith("py"):
+            print net.split(".")[0]
 
-
-single_model_runtime("inception_resnet_v1",128,128,3)
+#single_model_runtime("vgg11",128,128,3)
+test_all_model("nets")

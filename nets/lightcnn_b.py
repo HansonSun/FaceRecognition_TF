@@ -11,7 +11,7 @@ def MFM(net):
 	return eltwise
 
 
-def inference(image,dropout_keep_prob=0.8,is_training=True,scope="inference",weight_decay=0.0):
+def inference(image,dropout_keep_prob=0.8,is_training=True,scope="inference",weight_decay=0.0,bottleneck_layer_size=256):
 	end_poins=[]
 	with tf.variable_scope(scope, 'inference', [image]):
 		with slim.arg_scope([slim.conv2d, slim.fully_connected],activation_fn=None,
@@ -63,7 +63,7 @@ def inference(image,dropout_keep_prob=0.8,is_training=True,scope="inference",wei
 			net=slim.flatten(net)
 			#droupout
 			net = slim.dropout(net, dropout_keep_prob, is_training=is_training,scope='Dropout')
-			net=slim.fully_connected(net,512,activation_fn=None,scope="fc1")
+			net=slim.fully_connected(net,bottleneck_layer_size*2,activation_fn=None,scope="fc1")
 			#MFM_FC1
 			net=MFM(net)
 
