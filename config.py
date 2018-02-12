@@ -71,6 +71,10 @@ contrast_range=[0.5,1.5]
 #random saturation
 random_color_saturation=0
 saturaton_range=[0.5,1.5]
+
+#normtype
+normtype=0
+
 ##----------------------------------------------------------------##
 
 ##-----------------------center loss------------------------------##

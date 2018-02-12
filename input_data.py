@@ -130,7 +130,12 @@ def GetPLFromCsv(datasetpath):
         image.set_shape((config.train_input_height,config.train_input_width,config.train_input_channel))
 
     # standardize the image
-    image=tf.image.per_image_standardization(image)
+    if config.normtype==0:
+        image=tf.image.per_image_standardization(image)
+    elif config.normtype==1:
+        image=(image-128)/128.0
+    elif config.normtype==2:
+        image=image/255.0
 
     min_after_dequeue = 1000  
     capacity = min_after_dequeue + config.train_batch_size  
