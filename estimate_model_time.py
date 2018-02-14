@@ -44,5 +44,5 @@ def test_all_model(net_dir):
         if net.endswith("py"):
             print net.split(".")[0]
 
-#single_model_runtime("vgg11",128,128,3)
-test_all_model("nets")
+single_model_runtime("alexnet",128,128,3)
+#test_all_model("nets")

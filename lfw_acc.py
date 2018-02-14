@@ -30,11 +30,11 @@ class test():
 
     def compare2face(self,path_l,path_r):
 
-        images = np.zeros((2, 128, 128, 3))
+        images = np.zeros((2, 160, 160, 3))
         for index,i in enumerate([path_l,path_r]):
             img=cv2.imread(i)
             img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-            img=cv2.resize(img,(128,128))
+            img=cv2.resize(img,(160,160))
             img=img.astype(np.float32)
             images[index,:,:,:] = self.prewhiten(img)
 

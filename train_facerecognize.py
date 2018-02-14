@@ -76,13 +76,13 @@ def run_training():
     #load model and inference
     network = importlib.import_module("lightcnn_b")
     image_batch = tf.identity(image_batch, 'input')
-    prelogits,_ = network.inference(image_batch,is_training=phase_train_placeholder,weight_decay=config.weight_decay)
-    logits = slim.fully_connected(prelogits, class_num, activation_fn=None, 
+    features,_ = network.inference(image_batch,is_training=phase_train_placeholder,weight_decay=config.weight_decay)
+    logits = slim.fully_connected(features, class_num, activation_fn=None, 
                     weights_initializer=tf.truncated_normal_initializer(stddev=0.1), 
                     weights_regularizer=slim.l2_regularizer(5e-5),
                     scope='Logits_end', reuse=False)
 
-    embeddings = tf.nn.l2_normalize(prelogits, 1, 1e-10, name='embeddings')
+    embeddings = tf.nn.l2_normalize(features, 1, 1e-10, name='embeddings')
     predict_labels=tf.argmax(logits,1)
 
 
@@ -91,21 +91,19 @@ def run_training():
     learning_rate = tf.train.exponential_decay(config.learning_rate,global_step,config.decay_step,config.decay_rate,staircase=True)
 
     #cal loss and update
-    centerloss, _ = lossfunc.center_loss(prelogits, label_batch, config.centerloss_alpha, class_num)
+    #centerloss, _ = lossfunc.center_loss(prelogits, label_batch, config.centerloss_alpha, class_num)
     softmaxloss = lossfunc.softmax_loss(logits, label_batch)  
     #tf.add_to_collection('losses', softmaxloss)
     #regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
     #total_loss=tf.add_n([softmaxloss,config.centerloss_lambda * centerloss]+regularization_losses,name='total_loss')
-    total_loss=softmaxloss+ config.centerloss_lambda * centerloss
-
+    #total_loss=softmaxloss+ config.centerloss_lambda * centerloss
+    total_loss=softmaxloss
     #optimize loss and update
     #train_op = training(total_loss,learning_rate,global_step,tf.global_variables())
     train_op = trainning2(total_loss,learning_rate,global_step)
-
     saver=tf.train.Saver(tf.trainable_variables(),max_to_keep=10)
 
     with tf.Session() as sess:
-
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 

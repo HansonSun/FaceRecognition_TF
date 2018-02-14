@@ -23,7 +23,7 @@ def main():
             output_graph_def = freeze_graph_def(sess, input_graph_def, 'embeddings')
 
         # Serialize and dump the output graph to the filesystem
-        with tf.gfile.GFile("first.pb", 'wb') as f:
+        with tf.gfile.GFile("release_pb/first.pb", 'wb') as f:
             f.write(output_graph_def.SerializeToString())
 
 def freeze_graph_def(sess, input_graph_def, output_node_names):
