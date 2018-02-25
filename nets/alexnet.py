@@ -19,7 +19,6 @@ def inference(inputs,is_training=True,dropout_keep_prob=0.5,spatial_squeeze=True
             net = slim.conv2d(net, 256, [3, 3], scope='conv5')
             net = slim.max_pool2d(net, [3, 3], 2, scope='pool5')
             end_points = slim.utils.convert_collection_to_dict(end_points_collection)
-            print end_points
             end_points[sc.name + '/fc8'] = net
             return net, end_points
 '''

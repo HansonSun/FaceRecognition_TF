@@ -5,7 +5,7 @@ import tensorflow.contrib.slim as slim
 def MFM(net):
 	net_channel=int (net.shape[-1]) 
 	#Slice
-	slice1,slice2 = tf.split(net,[net_channel/2,net_channel/2],int(net.shape.ndims)-1 )
+	slice1,slice2 = tf.split(net,[int(net_channel/2),int(net_channel/2)],int(net.shape.ndims)-1 )
 	#eltwise max
 	eltwise=tf.maximum(slice1,slice2)
 	return eltwise
