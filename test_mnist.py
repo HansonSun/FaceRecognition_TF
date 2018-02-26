@@ -51,47 +51,49 @@ def Network(data_input, training = True):
     feat = tflearn.fully_connected(x, 2, weights_init = 'xavier')
     return feat
 
-class Module(object):
-
-    def __init__(self, batch_size, num_classes):
-        x = tf.placeholder(tf.float32, [batch_size, 784])
-        y_ = tf.placeholder(tf.int64, [batch_size,])
-        I = tf.reshape(x, [-1, 28, 28, 1])
-        feat = Network(I)
-        dim = feat.get_shape()[-1]
-        logits, loss = Loss_ASoftmax(x = feat, y = y_, l = 1.0, num_cls = num_classes, m = 2)
-        self.x_ = x
-        self.y_ = y_
-        self.y = tf.argmax(logits, 1)
-        self.feat = feat
-        self.loss = loss
-        self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.y, self.y_), 'float'))
 
 batch_size = 256
 num_iters = 2000
 num_classes = 10
 
-mnist = input_data.read_data_sets('/MNIST/MNIST_data', one_hot=False)
+x = tf.placeholder(tf.float32, [batch_size, 28, 28, 1])
+y_ = tf.placeholder(tf.int64, [batch_size,])
+
+feat = Network(x)
+
+logits, loss = Loss_ASoftmax(x = feat, y = y_, l = 1.0, num_cls = num_classes, m = 2)
+x_ = x
+y_ = y_
+y = tf.argmax(logits, 1)
+feat = feat
+loss = loss
+accuracy = tf.reduce_mean(tf.cast(tf.equal(y, y_), 'float'))
+
+
+
+mnist = input_data.read_data_sets('./MNIST/MNIST_data', one_hot=False)
 sess = tf.InteractiveSession()
 
-mod = Module(batch_size, num_classes)
+
 global_step = tf.Variable(0, trainable = False)
 learning_rate = tf.train.exponential_decay(0.001, global_step, 10000, 0.9, staircase=True)
 opt = tf.train.AdamOptimizer(learning_rate)
-train_op = opt.minimize(mod.loss, global_step)
+train_op = opt.minimize(loss, global_step)
 
 tf.global_variables_initializer().run()
 
 for t in range(num_iters):
 
     batch_xs, batch_ys = mnist.train.next_batch(batch_size)
-    fd = { mod.x_ : batch_xs, mod.y_ : batch_ys }
-    _, v = sess.run([train_op, mod.loss], feed_dict=fd)
+    batch_xs=np.reshape(batch_xs,(batch_size,28,28,1))
+
+    fd = { x_ : batch_xs, y_ : batch_ys }
+    _, v = sess.run([train_op, loss], feed_dict=fd)
     if t % 100 == 0:
         print (t, v)
 
 print ('Training Done')
-
+'''
 ### evaluation
 num = mnist.test.images.shape[0]
 test_data = np.ndarray([batch_size,784])
@@ -103,7 +105,7 @@ for b in range(0, num, batch_size):
     sz = e - b
     test_data[0:sz,:] = mnist.test.images[b:e]
     test_labels[0:sz] = mnist.test.labels[b:e]
-    acc_vec.append(sess.run(mod.accuracy, feed_dict={mod.x_: test_data, mod.y_: test_labels}))
+    acc_vec.append(sess.run(accuracy, feed_dict={x_: test_data, y_: test_labels}))
 
 print ('Testing Accuracy: ', np.mean(np.array(acc_vec)))
 
@@ -113,5 +115,6 @@ np.random.shuffle(sample_data)
 sample_data = sample_data[:batch_size]
 test_data = mnist.test.images[sample_data,:]
 test_labels = mnist.test.labels[sample_data]
-feat_vec = sess.run(mod.feat, feed_dict={mod.x_: test_data})
+feat_vec = sess.run(feat, feed_dict={x_: test_data})
 visual_feature_space(feat_vec, test_labels, num_classes)
+'''
