@@ -12,7 +12,7 @@ def MFM(net):
 
 
 def inference(image,dropout_keep_prob=0.8,is_training=True,scope="inference",weight_decay=0.0,bottleneck_layer_size=256):
-	end_poins=[]
+	end_poins={}
 	with tf.variable_scope(scope, 'inference', [image]):
 		with slim.arg_scope([slim.conv2d, slim.fully_connected],activation_fn=None,
 						weights_initializer=slim.xavier_initializer_conv2d(uniform=True),
