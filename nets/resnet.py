@@ -1,482 +1,382 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import mxnet as mx
+
 import numpy as np
-import symbol_utils
-import tensorflow.contrib.slim
+import tensorflow as tf
+import tensorflow.contrib.slim as slim
 import tflearn
 
-def Conv(**kwargs):
-    #name = kwargs.get('name')
-    #_weight = mx.symbol.Variable(name+'_weight')
-    #_bias = mx.symbol.Variable(name+'_bias', lr_mult=2.0, wd_mult=0.0)
-    #body = mx.sym.Convolution(weight = _weight, bias = _bias, **kwargs)
-    body = mx.sym.Convolution(**kwargs)
-    return body
+def get_fc1(last_conv, num_classes, fc_type):
+  bn_mom = 0.9
+  body = last_conv
+  if fc_type=='E':
+    body = slim.batch_norm(body, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope='bn1')
+    body = slim.dropout(body, keep_prob=0.4)
+    fc1 = slim.fully_connected(body, num_classes, scope='pre_fc1')
+    fc1 = slim.batch_norm(fc1, center=False,scale=False ,epsilon=2e-5, decay=bn_mom, scope='fc1')
+  elif fc_type=='F':
+    body = slim.batch_norm(body, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope='bn1')
+    body = slim.dropout(body, keep_prob=0.4)
+    fc1 = slim.fully_connected(body, num_classes, scope='fc1')
+  elif fc_type=='G':
+    body = slim.batch_norm(body, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope='bn1')
+    fc1 = slim.fully_connected(body, num_classes, scope='fc1')
+  elif fc_type=='H':
+    fc1 = slim.fully_connected(body, num_classes, scope='fc1')
+  elif fc_type=='I':
+    body = slim.batch_norm(body, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope='bn1')
+    fc1 = slim.fully_connected(body, num_classes, scope='pre_fc1')
+    fc1 = slim.batch_norm(fc1, center=False,scale=False, epsilon=2e-5, decay=bn_mom, scope='fc1')
+  elif fc_type=='J':
+    fc1 = mslim.fully_connected(body, num_classes, scope='pre_fc1')
+    fc1 = slim.batch_norm(fc1, center=False,scale=False, epsilon=2e-5, decay=bn_mom, scope='fc1')
+  else:
+    bn1 = slim.batch_norm(body, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope='bn1')
+    relu1 = tflearn.prelu(bn1)
+    # Although kernel is not used here when global_pool=True, we should put one
+    pool1 = tflearn.global_avg_pool (relu1,  name='pool1')
+    flat = slim.flatten(pool1)
+    if len(fc_type)>1:
+      if fc_type[1]=='X':
+        print('dropout mode')
+        flat = slim.dropout(flat, keep_prob=0.2)
+      fc_type = fc_type[0]
+    if fc_type=='A':
+      fc1 = flat
+    else:
+      #B-D
+      #B
+      fc1 = slim.fully_connected(flat, num_classes, name='pre_fc1')
+      if fc_type=='C':
+        fc1 = slim.batch_norm(fc1, center=False,scale=False, epsilon=2e-5, decay=bn_mom, scope='fc1')
+      elif fc_type=='D':
+        fc1 = slim.batch_norm(fc1,center=False,scale=False, epsilon=2e-5, decay=bn_mom, scope='fc1')
+        fc1 = tflearn.prelu(fc1)
+  return fc1
 
 
-def Act(data, act_type, name):
-    #ignore param act_type, set it in this function 
-    body = mx.sym.LeakyReLU(data = data, act_type='prelu', name = name)
-    return body
 
 def residual_unit_v1(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs):
-    """Return ResNet Unit symbol for building ResNet
-    Parameters
-    ----------
-    data : str
-        Input data
-    num_filter : int
-        Number of output channels
-    bnf : int
-        Bottle neck channels factor with regard to num_filter
-    stride : tuple
-        Stride used in convolution
-    dim_match : Boolean
-        True means channel number between input and output is the same, otherwise means differ
-    name : str
-        Base name of the operators
-    workspace : int
-        Workspace used in convolution operator
-    """
+
     use_se = kwargs.get('version_se', 1)
     bn_mom = kwargs.get('bn_mom', 0.9)
-    workspace = kwargs.get('workspace', 256)
-    memonger = kwargs.get('memonger', False)
+
     #print('in unit1')
     if bottle_neck:
-        conv1 = slim.conv2d(data, int(num_filter*0.25), kernel_size=[1,1], stride=stride, scope=name + '_conv1')
-        bn1 = slim.batch_norm(conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom, scope=name + '_bn1')
-        act1 = tflearn.prelu(bn1, name=name + '_relu1')
-        conv2 = slim.conv2d(act1,  int(num_filter*0.25), kernel_size=[3,3], stride=(1,1), scope=name + '_conv2')
-        bn2 = slim.batch_norm(conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom, scope=name + '_bn2')
-        act2 = tflearn.prelu(bn2, name=name + '_relu2')
-        conv3 = slim.conv2d(act2, num_filter, kernel_size=[1,1], stride=(1,1), scope=name + '_conv3')
-        bn3 = slim.batch_norm(conv3, fix_gamma=False, eps=2e-5, momentum=bn_mom, scope=name + '_bn3')
+        conv1 = slim.conv2d(data, int(num_filter*0.25), [1,1], stride=stride, padding="VALID",scope=name + '_conv1')
+        bn1 = slim.batch_norm(conv1, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope=name + '_bn1')
+        act1 = tflearn.prelu(bn1)
+        conv2 = slim.conv2d(act1,  int(num_filter*0.25), [3,3], stride=1, padding="SAME",scope=name + '_conv2')
+        bn2 = slim.batch_norm(conv2, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn2')
+        act2 = tflearn.prelu(bn2)
+        conv3 = slim.conv2d(act2, num_filter, [1,1], stride=1, padding="VALID",scope=name + '_conv3')
+        bn3 = slim.batch_norm(conv3, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn3')
 
         if use_se:
           #se begin
-          body = slim.avg_pool2d(data=bn3, global_pool=True, kernel_size=(7, 7), pool_type='avg', name=name+'_se_pool1')
-          body = slim.conv2d(data=body,  num_outputs=num_filter//16, kernel_size=(1,1), stride=(1,1), scope=name+"_se_conv1")
-          body = tflearn.prelu(data=body, name=name+'_se_relu1')
-          body = slim.conv2d(data=body,  num_outputs=num_filter, kernel_size=(1,1), stride=(1,1),scope=name+"_se_conv2")
+          body = tflearn.global_avg_pool (bn3,  name=name+'_se_pool1')
+          body = slim.conv2d(body,  num_filter//16, [1,1],stride=1,padding="VALID", scope=name+"_se_conv1")
+          body = tflearn.prelu(body)
+          body = slim.conv2d(body, num_filter, [1,1],stride=1,padding="VALID",scope=name+"_se_conv2")
           body = tf.sigmoid(body)
-          bn3 = mx.symbol.broadcast_mul(bn3, body)
+          bn3 = slim.mul(bn3, body)
           #se end
 
         if dim_match:
             shortcut = data
         else:
-            conv1sc = slim.conv2d(data=data,  num_outputs=num_filter, kernel=(1,1), stride=stride,scope=name+'_conv1sc')
-            shortcut = slim.batch_norm(data=conv1sc, fix_gamma=False, eps=2e-5, momentum=bn_mom, scope=name + '_sc')
-        if memonger:
-            shortcut._set_attr(mirror_stage='True')
-        return tflearn.prelu(data=bn3 + shortcut,  name=name + '_relu3')
+            conv1sc = slim.conv2d(data,  num_filter, [1,1], stride=stride,biases_initializer=None,scope=name+'_conv1sc')
+            shortcut = slim.batch_norm(conv1sc, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_sc')
+
+        return tflearn.prelu(bn3 + shortcut)
     else:
-        conv1 = slim.conv2d(data=data,  num_outputs=num_filter, kernel_size=(3,3), stride=stride, scope=name + '_conv1')
-        bn1 = slim.batch_norm(data=conv1, fix_gamma=False, momentum=bn_mom, eps=2e-5, scope=name + '_bn1')
-        act1 = tflearn.prelu(data=bn1,  name=name + '_relu1')
-        conv2 = slim.conv2d(data=act1,  num_outputs=num_filter, kernel_size=(3,3), stride=(1,1), scope=name + '_conv2')
-        bn2 = slim.batch_norm(data=conv2, fix_gamma=False, momentum=bn_mom, eps=2e-5, scope=name + '_bn2')
+        conv1 = slim.conv2d(data,  num_filter, [3,3], stride=stride,biases_initializer=None,scope=name + '_conv1')
+        bn1 = slim.batch_norm(conv1, center=True,scale=True,decay=bn_mom, epsilon=2e-5, scope=name + '_bn1')
+        act1 = tflearn.prelu(bn1)
+        conv2 = slim.conv2d(act1, num_filter, [3,3], stride=1,biases_initializer=None, scope=name + '_conv2')
+        bn2 = slim.batch_norm(conv2,center=True,scale=True,  decay=bn_mom, epsilon=2e-5, scope=name + '_bn2')
         if use_se:
           #se begin
-          body = slim.avg_pool2d(data=bn2, global_pool=True, kernel_size=(7, 7), pool_type='avg', name=name+'_se_pool1')
-          body = slim.conv2d(data=body,  num_outputs=num_filter//16, kernel_size=(1,1), stride=(1,1),scope=name+"_se_conv1")
-          body = tflearn.prelu(data=body,  name=name+'_se_relu1')
-          body = slim.conv2d(data=body,  num_outputs=num_filter, kernel_size=(1,1), stride=(1,1),scope=name+"_se_conv2")
+          body = tflearn.global_avg_pool (bn2,name=name+'_se_pool1')
+          body = slim.conv2d(body,num_filter//16, [1,1], stride=1,scope=name+"_se_conv1")
+          body = tflearn.prelu(body)
+          body = slim.conv2d(body, num_filter,[1,1], stride=1,scope=name+"_se_conv2")
           body = tf.sigmoid(body)
-          bn2 = mx.symbol.broadcast_mul(bn2, body)
+          bn2 = tf.mul(bn2, body)
           #se end
 
         if dim_match:
             shortcut = data
         else:
-            conv1sc = slim.conv2d(data=data, num_filter=num_filter, kernel=(1,1), stride=stride,scope=name+'_conv1sc')
-            shortcut = slim.batch_norm(data=conv1sc, fix_gamma=False, momentum=bn_mom, eps=2e-5, scope=name + '_sc')
-        if memonger:
-            shortcut._set_attr(mirror_stage='True')
-        return tflearn.prelu(data=bn2 + shortcut, name=name + '_relu3')
+            conv1sc = slim.conv2d(data, num_filter,[1,1],biases_initializer=None, stride=stride,scope=name+'_conv1sc')
+            shortcut = slim.batch_norm(conv1sc, center=True,scale=True,decay=bn_mom, epsilon=2e-5, scope=name + '_sc')
+        
+        output=tf.concat([bn2 ,shortcut],3)
+        return tflearn.prelu(output)
 
 def residual_unit_v1_L(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs):
-    """Return ResNet Unit symbol for building ResNet
-    Parameters
-    ----------
-    data : str
-        Input data
-    num_filter : int
-        Number of output channels
-    bnf : int
-        Bottle neck channels factor with regard to num_filter
-    stride : tuple
-        Stride used in convolution
-    dim_match : Boolean
-        True means channel number between input and output is the same, otherwise means differ
-    name : str
-        Base name of the operators
-    workspace : int
-        Workspace used in convolution operator
-    """
+
     use_se = kwargs.get('version_se', 1)
     bn_mom = kwargs.get('bn_mom', 0.9)
-    workspace = kwargs.get('workspace', 256)
-    memonger = kwargs.get('memonger', False)
     #print('in unit1')
     if bottle_neck:
-        conv1 = slim.conv2d(data=data, num_filter=int(num_filter*0.25), kernel=(1,1), stride=(1,1),scope=name + '_conv1')
-        bn1 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn1')
-        act1 = tflearn.prelu(data=bn1, act_type='relu', name=name + '_relu1')
-        conv2 = slim.conv2d(data=act1, num_filter=int(num_filter*0.25), kernel=(3,3), stride=(1,1),scope=name + '_conv2')
-        bn2 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn2')
-        act2 = tflearn.prelu(data=bn2, act_type='relu', name=name + '_relu2')
-        conv3 = slim.conv2d(data=act2, num_filter=num_filter, kernel=(1,1), stride=stride, pad=(0,0),scope=name + '_conv3')
-        bn3 = mx.sym.BatchNorm(data=conv3, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn3')
+        conv1 = slim.conv2d(data, int(num_filter*0.25),[1,1], stride=1,biases_initializer=None,scope=name + '_conv1')
+        bn1 = slim.batch_norm(conv1, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope=name + '_bn1')
+        act1 = tflearn.prelu(bn1)
+        conv2 = slim.conv2d(act1, int(num_filter*0.25), [3,3], stride=1,biases_initializer=None,scope=name + '_conv2')
+        bn2 = slim.batch_norm(conv2, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope=name + '_bn2')
+        act2 = tflearn.prelu(bn2)
+        conv3 = slim.conv2d(act2, num_filter, [1,1], stride=stride,biases_initializer=None,scope=name + '_conv3')
+        bn3 = slim.batch_norm(conv3, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn3')
 
         if use_se:
           #se begin
-          body = slim.avg_pool2d(data=bn3, global_pool=True, kernel=(7, 7), pool_type='avg', name=name+'_se_pool1')
-          body = slim.conv2d(data=body, num_filter=num_filter//16, kernel=(1,1), stride=(1,1),scope=name+"_se_conv1")
-          body = tflearn.prelu(data=body, act_type='relu', name=name+'_se_relu1')
-          body = slim.conv2d(data=body, num_filter=num_filter, kernel=(1,1), stride=(1,1),scope=name+"_se_conv2")
-          body = mx.symbol.Activation(data=body, act_type='sigmoid', name=name+"_se_sigmoid")
-          bn3 = mx.symbol.broadcast_mul(bn3, body)
+          body = tflearn.global_avg_pool (bn3,name=name+'_se_pool1')
+          body = slim.conv2d(body, num_filter//16, [1,1], stride=1,scope=name+"_se_conv1")
+          body = tflearn.prelu(body)
+          body = slim.conv2d(body,num_filter,[1,1], stride=1,scope=name+"_se_conv2")
+          body = tf.sigmoid(body)
+          bn3 = tf.mul(bn3, body)
           #se end
 
         if dim_match:
             shortcut = data
         else:
-            conv1sc = slim.conv2d(data=data, num_filter=num_filter, kernel=(1,1), stride=stride, no_bias=True,
-                                            workspace=workspace, name=name+'_conv1sc')
-            shortcut = mx.sym.BatchNorm(data=conv1sc, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_sc')
-        if memonger:
-            shortcut._set_attr(mirror_stage='True')
-        return tflearn.prelu(data=bn3 + shortcut, act_type='relu', name=name + '_relu3')
+            conv1sc = slim.conv2d(data, num_filter, [1,1], stride=stride,biases_initializer=None,scope=name+'_conv1sc')
+            shortcut = slim.batch_norm(conv1sc,center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_sc')
+
+        return tflearn.prelu(bn3 + shortcut)
     else:
-        conv1 = slim.conv2d(data=data, num_filter=num_filter, kernel=(3,3), stride=(1,1), pad=(1,1),
-                                      no_bias=True, workspace=workspace, name=name + '_conv1')
-        bn1 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, momentum=bn_mom, eps=2e-5, name=name + '_bn1')
-        act1 = tflearn.prelu(data=bn1, act_type='relu', name=name + '_relu1')
-        conv2 = slim.conv2d(data=act1, num_filter=num_filter, kernel=(3,3), stride=stride,scope=name + '_conv2')
-        bn2 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, momentum=bn_mom, eps=2e-5, name=name + '_bn2')
+        conv1 = slim.conv2d(data,num_filter, [3,3], stride=(1,1), biases_initializer=None,scope=name + '_conv1')
+        bn1 = slim.batch_norm(conv1,center=True,scale=True,  decay=bn_mom, epsilon=2e-5, scope=name + '_bn1')
+        act1 = tflearn.prelu(bn1)
+        conv2 = slim.conv2d(act1,num_filter,[3,3], stride=stride,biases_initializer=None,scope=name + '_conv2')
+        bn2 = slim.batch_norm(conv2,center=True,scale=True, decay=bn_mom, epsilon=2e-5, scope=name + '_bn2')
         if use_se:
           #se begin
-          body = slim.avg_pool2d(data=bn2, global_pool=True, kernel=(7, 7), pool_type='avg', name=name+'_se_pool1')
-          body = slim.conv2d(data=body, num_filter=num_filter//16, kernel=(1,1), stride=(1,1),name=name+"_se_conv1")
-          body = tflearn.prelu(data=body, act_type='relu', scope=name+'_se_relu1')
-          body = slim.conv2d(data=body, num_filter=num_filter, kernel=(1,1), stride=(1,1),scope=name+"_se_conv2")
-          body = mx.symbol.Activation(data=body, act_type='sigmoid', name=name+"_se_sigmoid")
-          bn2 = mx.symbol.broadcast_mul(bn2, body)
+          body = tflearn.global_avg_pool (bn2, name=name+'_se_pool1')
+          body = slim.conv2d(body,num_filter//16, [1,1], stride=(1,1),scope=name+"_se_conv1")
+          body = tflearn.prelu(body)
+          body = slim.conv2d(body, num_filter, [1,1], stride=(1,1),scope=name+"_se_conv2")
+          body = tf.sigmoid(body )
+          bn2 = tf.mul(bn2, body)
           #se end
 
         if dim_match:
             shortcut = data
         else:
-            conv1sc = slim.conv2d(data=data, num_filter=num_filter, kernel=(1,1), stride=stride,scope=name+'_conv1sc')
-            shortcut = mx.sym.BatchNorm(data=conv1sc, fix_gamma=False, momentum=bn_mom, eps=2e-5, name=name + '_sc')
-        if memonger:
-            shortcut._set_attr(mirror_stage='True')
-        return tflearn.prelu(data=bn2 + shortcut, act_type='relu', name=name + '_relu3')
+            conv1sc = slim.conv2d(data, num_filter,[1,1], stride=stride,biases_initializer=None,scope=name+'_conv1sc')
+            shortcut =slim.batch_norm(conv1sc, center=True,scale=True,decay=bn_mom, epsilon=2e-5, scope=name + '_sc')
+
+        return tflearn.prelu(bn2 + shortcut )
 
 def residual_unit_v2(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs):
-    """Return ResNet Unit symbol for building ResNet
-    Parameters
-    ----------
-    data : str
-        Input data
-    num_filter : int
-        Number of output channels
-    bnf : int
-        Bottle neck channels factor with regard to num_filter
-    stride : tuple
-        Stride used in convolution
-    dim_match : Boolean
-        True means channel number between input and output is the same, otherwise means differ
-    name : str
-        Base name of the operators
-    workspace : int
-        Workspace used in convolution operator
-    """
+
     use_se = kwargs.get('version_se', 1)
     bn_mom = kwargs.get('bn_mom', 0.9)
-    workspace = kwargs.get('workspace', 256)
-    memonger = kwargs.get('memonger', False)
+
     #print('in unit2')
     if bottle_neck:
         # the same as https://github.com/facebook/fb.resnet.torch#notes, a bit difference with origin paper
-        bn1 = mx.sym.BatchNorm(data=data, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn1')
-        act1 = tflearn.prelu(data=bn1, act_type='relu', name=name + '_relu1')
-        conv1 = slim.conv2d(data=act1, num_filter=int(num_filter*0.25), kernel=(1,1), stride=(1,1), pad=(0,0),
-                                   no_bias=True, workspace=workspace, name=name + '_conv1')
-        bn2 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn2')
-        act2 = tflearn.prelu(data=bn2, act_type='relu', name=name + '_relu2')
-        conv2 = slim.conv2d(data=act2, num_filter=int(num_filter*0.25), kernel=(3,3), stride=stride, pad=(1,1),
-                                   no_bias=True, workspace=workspace, name=name + '_conv2')
-        bn3 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn3')
-        act3 = tflearn.prelu(data=bn3, act_type='relu', name=name + '_relu3')
-        conv3 = slim.conv2d(data=act3, num_filter=num_filter, kernel=(1,1), stride=(1,1), pad=(0,0), no_bias=True,
-                                   workspace=workspace, name=name + '_conv3')
+        bn1 = slim.batch_norm(data, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope=name + '_bn1')
+        act1 = tflearn.prelu(bn1)
+        conv1 = slim.conv2d(act1, int(num_filter*0.25), [1,1], stride=(1,1),biases_initializer=None,scope=name + '_conv1')
+        bn2 = slim.batch_norm(conv1, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn2')
+        act2 = tflearn.prelu(bn2)
+        conv2 = slim.conv2d(act2, int(num_filter*0.25), [3,3], stride=stride,biases_initializer=None,scope=name + '_conv2')
+        bn3 = slim.batch_norm(conv2,center=True,scale=True,  epsilon=2e-5, decay=bn_mom, scope=name + '_bn3')
+        act3 = tflearn.prelu(bn3)
+        conv3 = slim.conv2d(act3, num_filter,[1,1], stride=(1,1),biases_initializer=None,scope=name + '_conv3')
         if use_se:
           #se begin
-          body = slim.avg_pool2d(data=conv3, global_pool=True, kernel=(7, 7), pool_type='avg', name=name+'_se_pool1')
-          body = slim.conv2d(data=body, num_filter=num_filter//16, kernel=(1,1), stride=(1,1), pad=(0,0),
-                                    name=name+"_se_conv1", workspace=workspace)
-          body = tflearn.prelu(data=body, act_type='relu', name=name+'_se_relu1')
-          body = slim.conv2d(data=body, num_filter=num_filter, kernel=(1,1), stride=(1,1), pad=(0,0),
-                                    name=name+"_se_conv2", workspace=workspace)
-          body = mx.symbol.Activation(data=body, act_type='sigmoid', name=name+"_se_sigmoid")
-          conv3 = mx.symbol.broadcast_mul(conv3, body)
+          body = tflearn.global_avg_pool (conv3, name=name+'_se_pool1')
+          body = slim.conv2d(body, num_filter//16, [1,1], stride=(1,1),scope=name+"_se_conv1")
+          body = tflearn.prelu(body)
+          body = slim.conv2d(body, num_filter, [1,1], stride=(1,1),scope=name+"_se_conv2")
+          body = tf.sigmoid(body)
+          conv3 = tf.mul(conv3, body)
         if dim_match:
             shortcut = data
         else:
-            shortcut = slim.conv2d(data=act1, num_filter=num_filter, kernel=(1,1), stride=stride, no_bias=True,
-                                            workspace=workspace, name=name+'_sc')
-        if memonger:
-            shortcut._set_attr(mirror_stage='True')
+            shortcut = slim.conv2d(act1, num_filter,[1,1], stride=stride,biases_initializer=None,scope=name+'_sc')
+
         return conv3 + shortcut
     else:
-        bn1 = mx.sym.BatchNorm(data=data, fix_gamma=False, momentum=bn_mom, eps=2e-5, name=name + '_bn1')
-        act1 = tflearn.prelu(data=bn1, act_type='relu', name=name + '_relu1')
-        conv1 = slim.conv2d(data=act1, num_filter=num_filter, kernel=(3,3), stride=stride,scope=name + '_conv1')
-        bn2 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, momentum=bn_mom, eps=2e-5, name=name + '_bn2')
-        act2 = tflearn.prelu(data=bn2, act_type='relu', name=name + '_relu2')
-        conv2 = slim.conv2d(data=act2, num_filter=num_filter, kernel=(3,3), stride=(1,1),scope=name + '_conv2')
+        bn1 = slim.batch_norm(data,center=True,scale=True,  decay=bn_mom, epsilon=2e-5, scope=name + '_bn1')
+        act1 = tflearn.prelu(bn1)
+        conv1 = slim.conv2d(act1, num_filter, [3,3], stride=stride,biases_initializer=None,scope=name + '_conv1')
+        bn2 = slim.batch_norm(conv1, center=True,scale=True,decay=bn_mom, epsilon=2e-5, scope=name + '_bn2')
+        act2 = tflearn.prelu(bn2)
+        conv2 = slim.conv2d(act2, num_filter, [3,3],stride=1,biases_initializer=None,scope=name + '_conv2')
         if use_se:
           #se begin
-          body = slim.avg_pool2d(data=conv2, global_pool=True, kernel=(7, 7), pool_type='avg', name=name+'_se_pool1')
-          body = slim.conv2d(data=body, num_filter=num_filter//16, kernel=(1,1), stride=(1,1), name=name+"_se_conv1")
-          body = tflearn.prelu(data=body, act_type='relu', name=name+'_se_relu1')
-          body = slim.conv2d(data=body, num_filter=num_filter, kernel=(1,1), stride=(1,1), scope=name+"_se_conv2")
-          body = mx.symbol.Activation(data=body, act_type='sigmoid', name=name+"_se_sigmoid")
-          conv2 = mx.symbol.broadcast_mul(conv2, body)
+          body = tflearn.global_avg_pool (conv2, name=name+'_se_pool1')
+          body = slim.conv2d(body, num_filter//16, [1,1], stride=(1,1), name=name+"_se_conv1")
+          body = tflearn.prelu(body)
+          body = slim.conv2d(body, num_filter, [1,1], stride=(1,1), scope=name+"_se_conv2")
+          body = slim.sigmoid(body)
+          conv2 = tf.mul(conv2, body)
         if dim_match:
             shortcut = data
         else:
-            shortcut = slim.conv2d(data=act1, num_filter=num_filter, kernel=(1,1), stride=stride, scope=name+'_sc')
-        if memonger:
-            shortcut._set_attr(mirror_stage='True')
-        return conv2 + shortcut
+            shortcut = slim.conv2d(act1, num_filter, [1,1], stride=stride, biases_initializer=None,scope=name+'_sc')
+        
+        output=tf.concat([conv2,shortcut],3)
+        return output
 
 def residual_unit_v3(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs):
-    
-    """Return ResNet Unit symbol for building ResNet
-    Parameters
-    ----------
-    data : str
-        Input data
-    num_filter : int
-        Number of output channels
-    bnf : int
-        Bottle neck channels factor with regard to num_filter
-    stride : tuple
-        Stride used in convolution
-    dim_match : Boolean
-        True means channel number between input and output is the same, otherwise means differ
-    name : str
-        Base name of the operators
-    workspace : int
-        Workspace used in convolution operator
-    """
-    use_se = kwargs.get('version_se', 1)
+
+    use_se = kwargs.get('version_se', 0)
     bn_mom = kwargs.get('bn_mom', 0.9)
-    workspace = kwargs.get('workspace', 256)
-    memonger = kwargs.get('memonger', False)
+
     #print('in unit3')
     if bottle_neck:
-        bn1 = mx.sym.BatchNorm(data=data, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn1')
-        conv1 = slim.conv2d(data=bn1, num_filter=int(num_filter*0.25), kernel=(1,1), stride=(1,1),scope=name + '_conv1')
-        bn2 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn2')
-        act1 = tflearn.prelu(data=bn2, act_type='relu', name=name + '_relu1')
-        conv2 = slim.conv2d(data=act1, num_filter=int(num_filter*0.25), kernel=(3,3), stride=(1,1),cope=name + '_conv2')
-        bn3 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn3')
-        act2 = tflearn.prelu(data=bn3, act_type='relu', name=name + '_relu2')
-        conv3 = slim.conv2d(data=act2, num_filter=num_filter, kernel=(1,1), stride=stride, scope=name + '_conv3')
-        bn4 = mx.sym.BatchNorm(data=conv3, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn4')
+        bn1 = slim.batch_norm(data,center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn1')
+        conv1 = slim.conv2d(bn1, int(num_filter*0.25), [1,1], stride=(1,1),biases_initializer=None,scope=name + '_conv1')
+        bn2 = slim.batch_norm(conv1, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn2')
+        act1 = tflearn.prelu(bn2)
+        conv2 = slim.conv2d(act1, int(num_filter*0.25), [3,3], stride=(1,1),biases_initializer=None,scope=name + '_conv2')
+        bn3 = slim.batch_norm(conv2, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn3')
+        act2 = tflearn.prelu(bn3)
+        conv3 = slim.conv2d(act2, num_filter, [1,1], stride=stride, biases_initializer=None,scope=name + '_conv3')
+        bn4 = slim.batch_norm(conv3,center=True,scale=True,  epsilon=2e-5, decay=bn_mom, scope=name + '_bn4')
 
         if use_se:
           #se begin
-          body = slim.avg_pool2d(data=bn4, global_pool=True, kernel=(7, 7), pool_type='avg', name=name+'_se_pool1')
-          body = slim.conv2d(data=body, num_filter=num_filter//16, kernel=(1,1), stride=(1,1), scope=name+"_se_conv1")
-          body = tflearn.prelu(data=body, act_type='relu', name=name+'_se_relu1')
-          body = slim.conv2d(data=body, num_filter=num_filter, kernel=(1,1), stride=(1,1), scope=name+"_se_conv2")
-          body = mx.symbol.Activation(data=body, act_type='sigmoid', name=name+"_se_sigmoid")
-          bn4 = mx.symbol.broadcast_mul(bn4, body)
+          body = tflearn.global_avg_pool (bn4, name=name+'_se_pool1')
+          body = slim.conv2d(body, num_filter//16, [1,1], stride=(1,1), scope=name+"_se_conv1")
+          body = tflearn.prelu(body)
+          body = slim.conv2d(body, num_filter, [1,1], stride=(1,1), scope=name+"_se_conv2")
+          body = tf.sigmoid(body)
+          bn4 = tf.mul(bn4, body)
           #se end
 
         if dim_match:
             shortcut = data
         else:
-            conv1sc = slim.conv2d(data=data, num_filter=num_filter, kernel=(1,1), stride=stride,scope=name+'_conv1sc')
-            shortcut = mx.sym.BatchNorm(data=conv1sc, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_sc')
-        if memonger:
-            shortcut._set_attr(mirror_stage='True')
+            conv1sc = slim.conv2d(data,num_filter, [1,1], stride=stride,biases_initializer=None,scope=name+'_conv1sc')
+            shortcut = slim.batch_norm(conv1sc,center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope=name + '_sc')
+
         return bn4 + shortcut
     else:
-        bn1 = mx.sym.BatchNorm(data=data, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn1')
-        conv1 = slim.conv2d(data=bn1, num_filter=num_filter, kernel=(3,3), stride=(1,1),scope=name + '_conv1')
-        bn2 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn2')
-        act1 = tflearn.prelu(data=bn2, act_type='relu', name=name + '_relu1')
-        conv2 = slim.conv2d(data=act1, num_filter=num_filter, kernel=(3,3), stride=stride, scope=name + '_conv2')
-        bn3 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn3')
+        bn1 = slim.batch_norm(data, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn1')
+        conv1 = slim.conv2d(bn1,num_filter, [3,3], stride=(1,1),biases_initializer=None,scope=name + '_conv1')
+        bn2 = slim.batch_norm(conv1, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope=name + '_bn2')
+        act1 = tflearn.prelu(bn2)
+        conv2 = slim.conv2d(act1, num_filter, [3,3], stride=stride, biases_initializer=None,scope=name + '_conv2')
+        bn3 = slim.batch_norm(conv2, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn3')
         if use_se:
           #se begin
-          body = slim.avg_pool2d(data=bn3, global_pool=True, kernel=(7, 7), pool_type='avg', name=name+'_se_pool1')
-          body = slim.conv2d(data=body, num_filter=num_filter//16, kernel=(1,1), stride=(1,1),scope=name+"_se_conv1")
-          body = tflearn.prelu(data=body, act_type='relu', name=name+'_se_relu1')
-          body = slim.conv2d(data=body, num_filter=num_filter, kernel=(1,1), stride=(1,1),scope=name+"_se_conv2")
-          body = mx.symbol.Activation(data=body, act_type='sigmoid', name=name+"_se_sigmoid")
-          bn3 = mx.symbol.broadcast_mul(bn3, body)
+          body = tflearn.global_avg_pool (bn3,name=name+'_se_pool1')
+          body = slim.conv2d(body,num_filter//16, [1,1], stride=(1,1),scope=name+"_se_conv1")
+          body = tflearn.prelu(body)
+          body = slim.conv2d(body,num_filter, [1,1], stride=(1,1),scope=name+"_se_conv2")
+          body = tf.sigmoid(body)
+          bn3 = tf.mul(bn3, body)
           #se end
 
         if dim_match:
             shortcut = data
         else:
-            conv1sc = slim.conv2d(data=data, num_filter=num_filter, kernel=(1,1), stride=stride, no_bias=True,
-                                            workspace=workspace, name=name+'_conv1sc')
-            shortcut = mx.sym.BatchNorm(data=conv1sc, fix_gamma=False, momentum=bn_mom, eps=2e-5, name=name + '_sc')
-        if memonger:
-            shortcut._set_attr(mirror_stage='True')
+            conv1sc = slim.conv2d(data,num_filter, [1,1], stride=stride,biases_initializer=None,scope=name+'_conv1sc')
+            shortcut = slim.batch_norm(conv1sc,center=True,scale=True,  decay=bn_mom, epsilon=2e-5, scope=name + '_sc')
+
         return bn3 + shortcut
 
 def residual_unit_v3_x(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs):
-    
-    """Return ResNeXt Unit symbol for building ResNeXt
-    Parameters
-    ----------
-    data : str
-        Input data
-    num_filter : int
-        Number of output channels
-    bnf : int
-        Bottle neck channels factor with regard to num_filter
-    stride : tuple
-        Stride used in convolution
-    dim_match : Boolean
-        True means channel number between input and output is the same, otherwise means differ
-    name : str
-        Base name of the operators
-    workspace : int
-        Workspace used in convolution operator
-    """
+
     assert(bottle_neck)
     use_se = kwargs.get('version_se', 1)
     bn_mom = kwargs.get('bn_mom', 0.9)
-    workspace = kwargs.get('workspace', 256)
-    memonger = kwargs.get('memonger', False)
+
     num_group = 32
     #print('in unit3')
-    bn1 = mx.sym.BatchNorm(data=data, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn1')
-    conv1 = slim.conv2d(data=bn1, num_group=num_group, num_filter=int(num_filter*0.5), kernel=(1,1), stride=(1,1), pad=(0,0),
-                               no_bias=True, workspace=workspace, name=name + '_conv1')
-    bn2 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn2')
-    act1 = tflearn.prelu(data=bn2, act_type='relu', name=name + '_relu1')
-    conv2 = slim.conv2d(data=act1, num_group=num_group, num_filter=int(num_filter*0.5), kernel=(3,3), stride=(1,1), pad=(1,1),
-                               no_bias=True, workspace=workspace, name=name + '_conv2')
-    bn3 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn3')
-    act2 = tflearn.prelu(data=bn3, act_type='relu', name=name + '_relu2')
-    conv3 = slim.conv2d(data=act2, num_filter=num_filter, kernel=(1,1), stride=stride, pad=(0,0), no_bias=True,
-                               workspace=workspace, name=name + '_conv3')
-    bn4 = mx.sym.BatchNorm(data=conv3, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn4')
+    bn1 = slim.batch_norm(data, center=True,scale=True, epsilon=2e-5, decay=bn_mom, name=name + '_bn1')
+    #conv1 = slim.conv2d(bn1, num_group=num_group, int(num_filter*0.5), kernel=(1,1), stride=(1,1),padding="VALID",biases_initializer=None,scope=name + '_conv1')
+    conv1 = tfleaen.grouped_conv_2d(bn1, num_group, int(num_filter*0.5), kernel=(3,3), stride=(1,1),biases_initializer=None,scope=name + '_conv2')
+    
+    bn2 = slim.batch_norm(conv1, enter=True,scale=True,epsilon=2e-5, decay=bn_mom, name=name + '_bn2')
+    act1 = tflearn.prelu(bn2, act_type='relu', name=name + '_relu1')
+    #conv2 = slim.conv2d(act1, num_group=num_group, int(num_filter*0.5), kernel=(3,3), stride=(1,1),biases_initializer=None,scope=name + '_conv2')
+    conv2 = tfleaen.grouped_conv_2d(act1, num_group, int(num_filter*0.5), kernel=(3,3), stride=(1,1),biases_initializer=None,scope=name + '_conv2')
+    
+    bn3 = slim.batch_norm(conv2,center=True,scale=True,  epsilon=2e-5, decay=bn_mom, name=name + '_bn3')
+    act2 = tflearn.prelu(bn3)
+    conv3 = slim.conv2d(act2, num_filter,[1,1], stride=stride,scope=name + '_conv3')
+    bn4 = slim.batch_norm(conv3, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope=name + '_bn4')
 
     if use_se:
       #se begin
-      body = slim.avg_pool2d(data=bn4, global_pool=True, kernel=(7, 7), pool_type='avg', name=name+'_se_pool1')
-      body = slim.conv2d(data=body, num_filter=num_filter//16, kernel=(1,1), stride=(1,1), pad=(0,0),
-                                name=name+"_se_conv1", workspace=workspace)
-      body = tflearn.prelu(data=body, act_type='relu', name=name+'_se_relu1')
-      body = slim.conv2d(data=body, num_filter=num_filter, kernel=(1,1), stride=(1,1), pad=(0,0),
-                                name=name+"_se_conv2", workspace=workspace)
-      body = mx.symbol.Activation(data=body, act_type='sigmoid', name=name+"_se_sigmoid")
-      bn4 = mx.symbol.broadcast_mul(bn4, body)
+      body = tflearn.global_avg_pool (bn4, name=name+'_se_pool1')
+      body = slim.conv2d(body, num_filter//16, [1,1], stride=(1,1),scope=name+"_se_conv1")
+      body = tflearn.prelu(body)
+      body = slim.conv2d(body,num_filter, [1,1], stride=(1,1),scope=name+"_se_conv2")
+      body = tf.sigmoid(body)
+      bn4 = tf.mul(bn4, body)
       #se end
 
     if dim_match:
         shortcut = data
     else:
-        conv1sc = slim.conv2d(data=data, num_filter=num_filter, kernel=(1,1), stride=stride, no_bias=True,
-                                        workspace=workspace, name=name+'_conv1sc')
-        shortcut = mx.sym.BatchNorm(data=conv1sc, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_sc')
-    if memonger:
-        shortcut._set_attr(mirror_stage='True')
+        conv1sc = slim.conv2d(data, num_filter, [1,1], stride=stride,biases_initializer=None,scope=name+'_conv1sc')
+        shortcut = slim.batch_norm(conv1sc, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope=name + '_sc')
+
     return bn4 + shortcut
 
 def residual_unit_v4(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs):
     
-    """Return ResNet Unit symbol for building ResNet
-    Parameters
-    ----------
-    data : str
-        Input data
-    num_filter : int
-        Number of output channels
-    bnf : int
-        Bottle neck channels factor with regard to num_filter
-    stride : tuple
-        Stride used in convolution
-    dim_match : Boolean
-        True means channel number between input and output is the same, otherwise means differ
-    name : str
-        Base name of the operators
-    workspace : int
-        Workspace used in convolution operator
-    """
     use_se = kwargs.get('version_se', 1)
     bn_mom = kwargs.get('bn_mom', 0.9)
-    workspace = kwargs.get('workspace', 256)
-    memonger = kwargs.get('memonger', False)
+
     #print('in unit3')
     if bottle_neck:
-        bn1 = mx.sym.BatchNorm(data=data, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn1')
-        conv1 = slim.conv2d(data=bn1, num_filter=int(num_filter*0.25), kernel=(1,1), stride=(1,1),scope=name + '_conv1')
-        bn2 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn2')
-        act1 = tflearn.prelu(data=bn2, act_type='relu', name=name + '_relu1')
-        conv2 = slim.conv2d(data=act1, num_filter=int(num_filter*0.25), kernel=(3,3), stride=(1,1),scope=name + '_conv2')
-        bn3 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn3')
-        act2 = tflearn.prelu(data=bn3, act_type='relu', name=name + '_relu2')
-        conv3 = slim.conv2d(data=act2, num_filter=num_filter, kernel=(1,1), stride=stride,scope=name + '_conv3')
-        bn4 = mx.sym.BatchNorm(data=conv3, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn4')
+        bn1 = slim.batch_norm(data, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn1')
+        conv1 = slim.conv2d(bn1, int(num_filter*0.25), [1,1], stride=(1,1),biases_initializer=None,scope=name + '_conv1')
+        bn2 = slim.batch_norm(conv1,center=True,scale=True,  epsilon=2e-5, decay=bn_mom, scope=name + '_bn2')
+        act1 = tflearn.prelu(bn2)
+        conv2 = slim.conv2d(act1, int(num_filter*0.25), [3,3], stride=(1,1),biases_initializer=None,scope=name + '_conv2')
+        bn3 = slim.batch_norm(conv2, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn3')
+        act2 = tflearn.prelu(bn3)
+        conv3 = slim.conv2d(act2, num_filter, [1,1], stride=stride,biases_initializer=None,scope=name + '_conv3')
+        bn4 = slim.batch_norm(conv3,center=True,scale=True,  epsilon=2e-5, decay=bn_mom, scope=name + '_bn4')
 
         if use_se:
           #se begin
-          body = slim.avg_pool2d(data=bn4, global_pool=True, kernel=(7, 7), pool_type='avg', name=name+'_se_pool1')
-          body = slim.conv2d(data=body, num_filter=num_filter//16, kernel=(1,1), stride=(1,1),scope=name+"_se_conv1")
-          body = tflearn.prelu(data=body, act_type='relu', name=name+'_se_relu1')
-          body = slim.conv2d(data=body, num_filter=num_filter, kernel=(1,1), stride=(1,1),scope=name+"_se_conv2")
-          body = mx.symbol.Activation(data=body, act_type='sigmoid', name=name+"_se_sigmoid")
-          bn4 = mx.symbol.broadcast_mul(bn4, body)
+          body = tflearn.global_avg_pool (bn4, name=name+'_se_pool1')
+          body = slim.conv2d(body, num_filter//16, [1,1], stride=(1,1),scope=name+"_se_conv1")
+          body = tflearn.prelu(body)
+          body = slim.conv2d(body, num_filter, [1,1], stride=(1,1),scope=name+"_se_conv2")
+          body = tf.sigmoid(body)
+          bn4 = tf.mul(bn4, body)
           #se end
         if dim_match:
             shortcut = data
-            if memonger:
-                shortcut._set_attr(mirror_stage='True')
+
             return bn4+shortcut
         else:
           return bn4
 
     else:
-        bn1 = mx.sym.BatchNorm(data=data, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn1')
-        conv1 = slim.conv2d(data=bn1, num_filter=num_filter, kernel=(3,3), stride=(1,1), pad=(1,1),
-                                      no_bias=True, workspace=workspace, name=name + '_conv1')
-        bn2 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn2')
-        act1 = tflearn.prelu(data=bn2, act_type='relu', name=name + '_relu1')
-        conv2 = slim.conv2d(data=act1, num_filter=num_filter, kernel=(3,3), stride=stride, pad=(1,1),
-                                      no_bias=True, workspace=workspace, name=name + '_conv2')
-        bn3 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn3')
+        bn1 = slim.batch_norm(data,center=True,scale=True,  epsilon=2e-5, decay=bn_mom, scope=name + '_bn1')
+        conv1 = slim.conv2d(bn1, num_filter, [3,3], stride=(1,1),biases_initializer=None,scope=name + '_conv1')
+        bn2 = slim.batch_norm(conv1,center=True,scale=True,  epsilon=2e-5, decay=bn_mom, scope=name + '_bn2')
+        act1 = tflearn.prelu(bn2)
+        conv2 = slim.conv2d(act1,num_filter, [3,3], stride=stride,biases_initializer=None,scope=name + '_conv2')
+        bn3 = slim.batch_norm(conv2, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn3')
         if use_se:
           #se begin
-          body = mx.sym.Pooling(data=bn3, global_pool=True, kernel=(7, 7), pool_type='avg', name=name+'_se_pool1')
-          body = slim.conv2d(data=body, num_filter=num_filter//16, kernel=(1,1), stride=(1,1), pad=(0,0),
-                                    name=name+"_se_conv1", workspace=workspace)
-          body = tflearn.prelu(data=body, act_type='relu', name=name+'_se_relu1')
-          body = slim.conv2d(data=body, num_filter=num_filter, kernel=(1,1), stride=(1,1), pad=(0,0),
-                                    name=name+"_se_conv2", workspace=workspace)
-          body = mx.symbol.Activation(data=body, act_type='sigmoid', name=name+"_se_sigmoid")
-          bn3 = mx.symbol.broadcast_mul(bn3, body)
+          body = tflearn.global_avg_pool (bn3,name=name+'_se_pool1')
+          body = slim.conv2d(body, num_filter//16, [1,1], stride=(1,1),scoep=name+"_se_conv1")
+          body = tflearn.prelu(body)
+          body = slim.conv2d(body,num_filter,[1,1], stride=(1,1),scope=name+"_se_conv2")
+          body = tf.sigmoid(body)
+          bn3 = tf.mul(bn3, body)
           #se end
 
         if dim_match:
             shortcut = data
-            if memonger:
-                shortcut._set_attr(mirror_stage='True')
+
             return bn3+shortcut
         else:
           return bn3
@@ -499,25 +399,8 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck, **kwar
     else:
       return residual_unit_v3_x(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs)
 
-def resnet(units, num_stages, filter_list, num_classes, bottle_neck, **kwargs):
+def resnet(images,units, num_stages, filter_list, num_classes, bottle_neck, **kwargs):
     bn_mom = kwargs.get('bn_mom', 0.9)
-    workspace = kwargs.get('workspace', 256)
-    """Return ResNet symbol of
-    Parameters
-    ----------
-    units : list
-        Number of units in each stage
-    num_stages : int
-        Number of stage
-    filter_list : list
-        Channel size of each stage
-    num_classes : int
-        Ouput size of symbol
-    dataset : str
-        Dataset type, only cifar10 and imagenet supports
-    workspace : int
-        Workspace used in convolution operator
-    """
     version_se = kwargs.get('version_se', 1)
     version_input = kwargs.get('version_input', 1)
     assert version_input>=0
@@ -527,44 +410,34 @@ def resnet(units, num_stages, filter_list, num_classes, bottle_neck, **kwargs):
     print(version_se, version_input, version_output, version_unit)
     num_unit = len(units)
     assert(num_unit == num_stages)
-    data = mx.sym.Variable(name='data')
-    data = mx.sym.identity(data=data, name='id')
-    data = data-127.5
-    data = data*0.0078125
-    #data = mx.sym.BatchNorm(data=data, fix_gamma=True, eps=2e-5, momentum=bn_mom, name='bn_data')
-    if version_input==0:
-      body = Conv(data=data, num_filter=filter_list[0], kernel=(7, 7), stride=(2,2), pad=(3, 3),
-                                no_bias=True, name="conv0", workspace=workspace)
-      body = mx.sym.BatchNorm(data=body, fix_gamma=False, eps=2e-5, momentum=bn_mom, name='bn0')
-      body = Act(data=body, act_type='relu', name='relu0')
-      body = mx.sym.Pooling(data=body, kernel=(3, 3), stride=(2,2), pad=(1,1), pool_type='max')
-    else:
-      body = data
-      body = Conv(data=body, num_filter=filter_list[0], kernel=(3,3), stride=(1,1), pad=(1, 1),
-                                no_bias=True, name="conv0", workspace=workspace)
-      body = mx.sym.BatchNorm(data=body, fix_gamma=False, eps=2e-5, momentum=bn_mom, name='bn0')
-      body = Act(data=body, act_type='relu', name='relu0')
-      #body = mx.sym.Pooling(data=body, kernel=(3, 3), stride=(2,2), pad=(1,1), pool_type='max')
 
+    if version_input==0:
+      body = slim.conv2d(images, filter_list[0], [7, 7], stride=(2,2),scope="conv0")
+      body = slim.batch_norm(body,center=True,scale=True,  epsilon=2e-5, decay=bn_mom, scope='bn0')
+      body = tflearn.prelu(body)
+      body = slim.max_pool2d(body, kernel_size=[3, 3], stride=(2,2))
+    else:
+      body = images
+      body = slim.conv2d(body, filter_list[0], [3,3], stride=(1,1),scope="conv0")
+      body = slim.batch_norm(body, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope='bn0')
+      body = tflearn.prelu(body)
+
+    
     for i in range(num_stages):
       if version_input==0:
         body = residual_unit(body, filter_list[i+1], (1 if i==0 else 2, 1 if i==0 else 2), False,
                              name='stage%d_unit%d' % (i + 1, 1), bottle_neck=bottle_neck, **kwargs)
       else:
-        body = residual_unit(body, filter_list[i+1], (2, 2), False,
-          name='stage%d_unit%d' % (i + 1, 1), bottle_neck=bottle_neck, **kwargs)
+        body = residual_unit(body,filter_list[i+1],(2, 2),False,name='stage%d_unit%d'%(i+1,1),bottle_neck=bottle_neck,**kwargs)
       for j in range(units[i]-1):
-        body = residual_unit(body, filter_list[i+1], (1,1), True, name='stage%d_unit%d' % (i+1, j+2),
-          bottle_neck=bottle_neck, **kwargs)
+        body = residual_unit(body,filter_list[i+1],(1,1),True,name='stage%d_unit%d'%(i+1,j+2),bottle_neck=bottle_neck,**kwargs)
 
-    fc1 = symbol_utils.get_fc1(body, num_classes, fc_type)
-    return fc1
+    fc1 = get_fc1(body, num_classes, fc_type)
+    
+    return body
 
-def get_symbol(num_classes, num_layers, **kwargs):
-    """
-    Adapted from https://github.com/tornadomeet/ResNet/blob/master/train_resnet.py
-    Original author Wei Wu
-    """
+def inference(images,is_training=True,num_classes=1000, num_layers=50, **kwargs):
+    end_points={}
     if num_layers >= 101:
         filter_list = [64, 256, 512, 1024, 2048]
         bottle_neck = True
@@ -597,9 +470,5 @@ def get_symbol(num_classes, num_layers, **kwargs):
     else:
         raise ValueError("no experiments done on num_layers {}, you can do it yourself".format(num_layers))
 
-    return resnet(units       = units,
-                  num_stages  = num_stages,
-                  filter_list = filter_list,
-                  num_classes = num_classes,
-                  bottle_neck = bottle_neck,
-                  **kwargs)
+    return resnet(images,units= units,num_stages  = num_stages,filter_list = filter_list,
+                  num_classes = num_classes,bottle_neck = bottle_neck,**kwargs),end_points

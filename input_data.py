@@ -129,13 +129,15 @@ def GetPLFromCsv(datasetpath):
     else :
         image.set_shape((config.train_input_height,config.train_input_width,config.train_input_channel))
 
+    image = tf.cast(image, tf.float32)
     # standardize the image
     if config.normtype==0:
         image=tf.image.per_image_standardization(image)
     elif config.normtype==1:
-        image=(image-128)/128.0
+        image = tf.subtract(image,127.5)
+        image=tf.div(image,128.0)
     elif config.normtype==2:
-        image=image/255.0
+        image=tf.div(image,255.0)
 
     min_after_dequeue = 1000  
     capacity = min_after_dequeue + config.train_batch_size  
@@ -149,7 +151,7 @@ def GetPLFromCsv(datasetpath):
 
   
 def runtest(reader_func):
-    image_batch,label_batch,_=reader_func( ["/home/hanson/dataset/test_align_144x144"] )
+    image_batch,label_batch,_,_=reader_func( ["/home/hanson/dataset/test_align_128x128"] )
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -160,6 +162,7 @@ def runtest(reader_func):
             while(1):
                 results=sess.run(image_batch)
                 for i in results:
+                    print i
                     i=i.astype(np.uint8)
                     i=cv2.cvtColor(i,cv2.COLOR_RGB2BGR)
                     cv2.imshow("fd",i)
