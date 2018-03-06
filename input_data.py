@@ -91,6 +91,9 @@ def GetPLFromCsv(datasetpath):
 
     #random crop the image
     if config.random_crop==1:
+        if config.crop_height>config.train_input_height or config.crop_width>config.train_input_width:
+            print ("crop size must <= input size")
+            exit()
         if(config.train_input_channel==1):
             image = tf.random_crop(image, [config.crop_height,config.crop_width])
         else:

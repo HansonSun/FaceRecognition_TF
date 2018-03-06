@@ -38,8 +38,8 @@ global_step=tf.Variable(0,trainable=False,name='global_step')
 
 
 #-----------------------------------modify here--------------------------------------------------##
-network = importlib.import_module("lightcnn_b")
-features,_ = network.inference(img_placeholder,is_training=phase_train_placeholder,bottleneck_layer_size=feat_size)
+network = importlib.import_module("resnet")
+features,_ = network.inference(img_placeholder,phase_train=phase_train_placeholder,bottleneck_layer_size=feat_size)
 logits = slim.fully_connected(features, class_num,activation_fn=None,weights_initializer=tf.truncated_normal_initializer(stddev=0.1),scope='Logits_end', reuse=False)
 #features = Network(img_placeholder)
 #logits, total_loss = Loss_ASoftmax(x = features, y = label_placeholder, l = 1.0, num_cls = 10, m = 2)

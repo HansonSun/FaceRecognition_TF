@@ -105,7 +105,7 @@ def reduction_b(net):
                         tower_conv2_2, tower_pool], 3)
     return net
   
-def inference(images, keep_probability=0.8, is_training=True,bottleneck_layer_size=128, weight_decay=0.0, reuse=None):
+def inference(images, keep_probability=0.8, phase_train=True,bottleneck_layer_size=128, weight_decay=0.0, reuse=None):
     batch_norm_params = {
         # Decay for the moving averages.
         'decay': 0.995,
@@ -122,7 +122,7 @@ def inference(images, keep_probability=0.8, is_training=True,bottleneck_layer_si
                         weights_regularizer=slim.l2_regularizer(weight_decay),
                         normalizer_fn=slim.batch_norm,
                         normalizer_params=batch_norm_params):
-        return inception_resnet_v1(images, is_training=is_training,
+        return inception_resnet_v1(images, is_training=phase_train,
               dropout_keep_prob=keep_probability, bottleneck_layer_size=bottleneck_layer_size, reuse=reuse)
 
 
@@ -130,10 +130,10 @@ def inception_resnet_v1(inputs, is_training=True,
                         dropout_keep_prob=0.8,
                         bottleneck_layer_size=128,
                         reuse=None, 
-                        scope='InceptionResnetV1'):
+                        scope='inference'):
     end_points = {}
   
-    with tf.variable_scope(scope, 'InceptionResnetV1', [inputs], reuse=reuse):
+    with tf.variable_scope(scope, 'inference', [inputs], reuse=reuse):
         with slim.arg_scope([slim.batch_norm, slim.dropout],
                             is_training=is_training):
             with slim.arg_scope([slim.conv2d, slim.max_pool2d, slim.avg_pool2d],

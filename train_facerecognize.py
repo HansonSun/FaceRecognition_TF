@@ -11,17 +11,15 @@ import input_data
 import tensorflow.contrib.slim as slim
 import time
 import lossfunc
+import lfw_acc
+from datetime import datetime
 
- 
-def _add_loss_summaries(total_loss):
+
+def training(total_loss, learning_rate, global_step, update_gradient_vars):
+    # Generate moving averages of all losses
     loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
     losses = tf.get_collection('losses')
     loss_averages_op = loss_averages.apply(losses + [total_loss])
-    return loss_averages_op
-
-def training(total_loss, learning_rate, global_step, update_gradient_vars):
-    # Generate moving averages of all losses and associated summaries.
-    #loss_averages_op = _add_loss_summaries(total_loss)
 
     # Compute gradients.
     #with tf.control_dependencies([loss_averages_op]):
@@ -63,20 +61,28 @@ def trainning2(loss, learning_rate,global_step):
 
 
 def run_training():
-    
-    if not os.path.exists(config.log_path):   # Create the log directory if it doesn't exist
-        os.mkdir(config.log_path)
-    if not os.path.exists(config.model_path): # Create the log directory if it doesn't exist
-        os.mkdir(config.model_path)
+
+    subdir = datetime.strftime(datetime.now(), '%Y%m%d-%H%M%S')
+    log_dir = os.path.join(os.path.expanduser(config.logs_base_dir), subdir)
+    if not os.path.isdir(log_dir):  # Create the log directory if it doesn't exist
+        os.makedirs(log_dir)
+    model_dir = os.path.join(os.path.expanduser(config.models_base_dir), subdir)
+    if not os.path.isdir(model_dir):  # Create the model directory if it doesn't exist
+        os.makedirs(model_dir)
+
+    print('Model directory: %s' % model_dir)
+    print('Log directory: %s' % log_dir)
 
     #load dataset
+    print ("loading dataset...")
     image_batch,label_batch,class_num,total_img_num = input_data.GetPLFromCsv( config.training_dateset ) 
     phase_train_placeholder = tf.placeholder(tf.bool, name='phase_train')     
     
     #load model and inference
-    network = importlib.import_module("lightcnn_b")
+    network = importlib.import_module(config.train_net)
+    print ("trian net:%s"%config.train_net)
     image_batch = tf.identity(image_batch, 'input')
-    features,_ = network.inference(image_batch,is_training=phase_train_placeholder,weight_decay=config.weight_decay)
+    features,_ = network.inference(image_batch,phase_train=phase_train_placeholder,weight_decay=config.weight_decay)
     logits = slim.fully_connected(features, class_num, activation_fn=None, 
                     weights_initializer=tf.truncated_normal_initializer(stddev=0.1), 
                     weights_regularizer=slim.l2_regularizer(5e-5),
@@ -91,16 +97,21 @@ def run_training():
     learning_rate = tf.train.exponential_decay(config.learning_rate,global_step,config.decay_step,config.decay_rate,staircase=True)
 
     #cal loss and update
-    #centerloss, _ = lossfunc.center_loss(prelogits, label_batch, config.centerloss_alpha, class_num)
-    softmaxloss = lossfunc.softmax_loss(logits, label_batch)  
-    #tf.add_to_collection('losses', softmaxloss)
-    #regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    #total_loss=tf.add_n([softmaxloss,config.centerloss_lambda * centerloss]+regularization_losses,name='total_loss')
-    #total_loss=softmaxloss+ config.centerloss_lambda * centerloss
-    total_loss=softmaxloss
+    softmaxloss = lossfunc.softmax_loss(logits, label_batch) 
+    tf.add_to_collection('losses', softmaxloss) 
+
+    if config.centerloss_lambda>0.0:
+        prelogits_center_loss, _,_ = lossfunc.center_loss(features, label_batch, config.centerloss_alpha, class_num)
+        tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_center_loss * config.centerloss_lambda)
+
+
+    regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    total_loss=tf.add_n([softmaxloss]+regularization_losses,name='total_loss')
+
+
     #optimize loss and update
-    #train_op = training(total_loss,learning_rate,global_step,tf.global_variables())
-    train_op = trainning2(total_loss,learning_rate,global_step)
+    train_op = training(total_loss,learning_rate,global_step,tf.global_variables())
+    #train_op = trainning2(total_loss,learning_rate,global_step)
     saver=tf.train.Saver(tf.trainable_variables(),max_to_keep=10)
 
     with tf.Session() as sess:
@@ -146,6 +157,8 @@ def run_training():
 
                 if (iter % config.snapshot==0): 
                     saver.save(sess, "model/recognize",global_step = iter)
+                    lfw_acc.test_lfw()
+
 
         except tf.errors.OutOfRangeError:
             print('Done training -- epoch limit reached')

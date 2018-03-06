@@ -20,7 +20,7 @@ def single_model_runtime(net,img_w,img_h,img_c,device="cpu"):
         phase_train_placeholder = tf.placeholder(tf.bool, name='phase_train') 
         image_input_placeholder= tf.placeholder(tf.float32,shape=[1,img_h,img_w,img_c],name="input")
         network = importlib.import_module(net)
-        prelogits,_ = network.inference(image_input_placeholder,is_training=phase_train_placeholder)
+        prelogits,_ = network.inference(image_input_placeholder,phase_train=phase_train_placeholder)
 
         with tf.Session() as sess:
 
@@ -44,5 +44,5 @@ def test_all_model(net_dir):
         if net.endswith("py"):
             print net.split(".")[0]
 
-single_model_runtime("alexnet",128,128,3)
+single_model_runtime("squeezenet",112,112,3)
 #test_all_model("nets")

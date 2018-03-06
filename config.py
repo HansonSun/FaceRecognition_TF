@@ -3,19 +3,19 @@ import tensorflow as tf
 
 ##-----------------train process parameter-----------------------##
 #training dataset path list
-training_dateset = ["/home/hanson/dataset/CASIA/CASIA-WebFace_align_zoom0.10"]
-train_batch_size=128
-train_input_width=180
-train_input_height=180
+training_dateset = ["/home/hanson/dataset/VGGFACE2/train_align"]
+train_batch_size=64
+train_input_width=170
+train_input_height=170
 train_input_channel=3    #rgb:3  gray:1
 #max epochs
 epochs=1000
 display_iter=10
 max_iter=1000000
 snapshot=1000
-model_path="./model"
-log_path="./log"
-
+models_base_dir="./model"
+logs_base_dir="./log"
+train_net="squeezenet"
 ##--------------------------------------------------------------##
 
 
@@ -36,7 +36,7 @@ decay_step=1000
 decay_rate=0.96
 # optimizer func
 optimizer_list=['ADAGRAD','ADADELTA','ADAM','RMSPROP','MOM']
-optimizer=optimizer_list[0]
+optimizer=optimizer_list[2]
 
 moving_average_decay=0.9999
 weight_decay=5e-5 
@@ -57,7 +57,7 @@ rotate_angle_range=[-90,90]
 random_flip=1
 
 #random brigtness
-random_color_brightness=1
+random_color_brightness=0
 max_brightness=0.2
 
 #random hue
@@ -73,7 +73,7 @@ random_color_saturation=0
 saturaton_range=[0.5,1.5]
 
 #normtype
-normtype=0
+normtype=-1
 
 ##----------------------------------------------------------------##
 
