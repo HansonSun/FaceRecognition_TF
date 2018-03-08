@@ -13,8 +13,8 @@ epochs=1000
 display_iter=10
 max_iter=1000000
 snapshot=1000
-models_base_dir="./model"
-logs_base_dir="./log"
+models_dir=""
+logs_dir=""
 train_net="squeezenet"
 ##--------------------------------------------------------------##
 
@@ -29,6 +29,12 @@ test_input_channel=3
 test_interval= 1000
 ##--------------------------------------------------------------##
 
+##--------------benchmark test----------------------------------##
+lfw_root_path="/home/hanson/valid_dataset/LFW/lfw_align_160x160"
+agedb_root_path="/home/hanson/valid_dataset/AGEDB"
+cfp_root_path="/home/hanson/valid_dataset/CFP"
+youtube_root_path="home/hanson/valid_dataset/YOUTUBE"
+##--------------------------------------------------------------##
 
 ##--------------------hyper parameter---------------------------##
 learning_rate=0.001

@@ -8,8 +8,9 @@ import sys
 sys.path.append("./nets")
 import numpy as np
 import time
+import argparse
 
-def single_model_runtime(net,img_w,img_h,img_c,device="cpu"):
+def single_model_runtime(net,img_w,img_h,img_c,device):
 
     if device=="gpu":
         tf_device="/gpu:0"
@@ -44,5 +45,13 @@ def test_all_model(net_dir):
         if net.endswith("py"):
             print net.split(".")[0]
 
-single_model_runtime("squeezenet",112,112,3)
-#test_all_model("nets")
+if __name__=="__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n','--net', type=str, help='net', default='lightcnn_b')
+    parser.add_argument('--img_h', type=int, help='image height', default=112)
+    parser.add_argument('--img_w', type=int, help='image width' , default=112)
+    parser.add_argument('--img_c', type=int, help='image channel' , default=3)
+    parser.add_argument('--device', type=str, help='device' , default='cpu')
+    args=parser.parse_args(sys.argv[1:])
+
+    single_model_runtime(args.net,args.img_h,args.img_w,args.img_c,args.device)

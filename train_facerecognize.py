@@ -11,7 +11,7 @@ import input_data
 import tensorflow.contrib.slim as slim
 import time
 import lossfunc
-import lfw_acc
+import lfw_eval
 from datetime import datetime
 
 
@@ -59,19 +59,37 @@ def trainning2(loss, learning_rate,global_step):
     return train_op
 
 
+def save_variables_and_metagraph(sess, saver, model_dir, model_name, step):
+    # Save the model checkpoint
+    print('Saving variables')
+    start_time = time.time()
+    checkpoint_path = os.path.join(model_dir, 'model-%s.ckpt' % model_name)
+    saver.save(sess, checkpoint_path, global_step=step, write_meta_graph=False)
+    save_time_variables = time.time() - start_time
+    print('Variables saved in %.2f seconds' % save_time_variables)
+    metagraph_filename = os.path.join(model_dir, 'model-%s.meta' % model_name)
+    save_time_metagraph = 0  
+    if not os.path.exists(metagraph_filename):
+        print('Saving metagraph')
+        start_time = time.time()
+        saver.export_meta_graph(metagraph_filename)
+        save_time_metagraph = time.time() - start_time
+        print('Metagraph saved in %.2f seconds' % save_time_metagraph)
+
+
 
 def run_training():
 
     subdir = datetime.strftime(datetime.now(), '%Y%m%d-%H%M%S')
-    log_dir = os.path.join(os.path.expanduser(config.logs_base_dir), subdir)
-    if not os.path.isdir(log_dir):  # Create the log directory if it doesn't exist
-        os.makedirs(log_dir)
-    model_dir = os.path.join(os.path.expanduser(config.models_base_dir), subdir)
-    if not os.path.isdir(model_dir):  # Create the model directory if it doesn't exist
-        os.makedirs(model_dir)
+    config.logs_dir = os.path.join(os.path.expanduser("log"), subdir)
+    if not os.path.isdir(config.logs_dir):  # Create the log directory if it doesn't exist
+        os.makedirs(config.logs_dir)
+    config.models_dir = os.path.join(os.path.expanduser("model"), subdir)
+    if not os.path.isdir(config.models_dir):  # Create the model directory if it doesn't exist
+        os.makedirs(config.models_dir)
 
-    print('Model directory: %s' % model_dir)
-    print('Log directory: %s' % log_dir)
+    print('Model directory: %s' % config.models_dir)
+    print('Log directory: %s' % config.logs_dir)
 
     #load dataset
     print ("loading dataset...")
@@ -82,11 +100,19 @@ def run_training():
     network = importlib.import_module(config.train_net)
     print ("trian net:%s"%config.train_net)
     image_batch = tf.identity(image_batch, 'input')
-    features,_ = network.inference(image_batch,phase_train=phase_train_placeholder,weight_decay=config.weight_decay)
-    logits = slim.fully_connected(features, class_num, activation_fn=None, 
-                    weights_initializer=tf.truncated_normal_initializer(stddev=0.1), 
-                    weights_regularizer=slim.l2_regularizer(5e-5),
-                    scope='Logits_end', reuse=False)
+    label_batch = tf.identity(label_batch, 'label_batch')
+
+    features,_ = network.inference(image_batch,
+        phase_train=phase_train_placeholder,
+        weight_decay=config.weight_decay,
+        bottleneck_layer_size=256)
+
+    logits = slim.fully_connected(features, class_num, 
+        activation_fn=None, 
+        weights_initializer=tf.truncated_normal_initializer(stddev=0.1), 
+        weights_regularizer=slim.l2_regularizer(5e-5),
+        scope='Logits_end', 
+        reuse=False)
 
     embeddings = tf.nn.l2_normalize(features, 1, 1e-10, name='embeddings')
     predict_labels=tf.argmax(logits,1)
@@ -99,7 +125,7 @@ def run_training():
     #cal loss and update
     softmaxloss = lossfunc.softmax_loss(logits, label_batch) 
     tf.add_to_collection('losses', softmaxloss) 
-
+    #add center loss
     if config.centerloss_lambda>0.0:
         prelogits_center_loss, _,_ = lossfunc.center_loss(features, label_batch, config.centerloss_alpha, class_num)
         tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_center_loss * config.centerloss_lambda)
@@ -154,10 +180,9 @@ def run_training():
                     use_time=0
                     display_loss=0.0
                     dispaly_acc=0.0
-
                 if (iter % config.snapshot==0): 
-                    saver.save(sess, "model/recognize",global_step = iter)
-                    lfw_acc.test_lfw()
+                    save_variables_and_metagraph(sess, saver, config.models_dir, "id", iter)
+                    lfw_eval.test_lfw()
 
 
         except tf.errors.OutOfRangeError:
