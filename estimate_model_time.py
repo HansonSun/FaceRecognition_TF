@@ -48,10 +48,10 @@ def test_all_model(net_dir):
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-n','--net', type=str, help='net', default='lightcnn_b')
-    parser.add_argument('--img_h', type=int, help='image height', default=112)
-    parser.add_argument('--img_w', type=int, help='image width' , default=112)
-    parser.add_argument('--img_c', type=int, help='image channel' , default=3)
-    parser.add_argument('--device', type=str, help='device' , default='cpu')
+    parser.add_argument('-ih','--height', type=int, help='image height', default=112)
+    parser.add_argument('-iw','--width',type=int, help='image width' , default=112)
+    parser.add_argument('-ic','--channel',type=int, help='image channel' , default=3)
+    parser.add_argument('-d','--device', type=str, help='device' , default='cpu')
     args=parser.parse_args(sys.argv[1:])
 
-    single_model_runtime(args.net,args.img_h,args.img_w,args.img_c,args.device)
+    single_model_runtime(args.net,args.height,args.width,args.channel,args.device)

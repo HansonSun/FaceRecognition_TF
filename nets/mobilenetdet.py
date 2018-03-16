@@ -9,7 +9,7 @@ from configs.kitti_config import config
 
 
 def xywh_to_yxyx(bbox):
-  shape = bbox.get_shape().as_list()
+shape = bbox.get_shape().as_list()
   _axis = 1 if len(shape) > 1 else 0
   [x, y, w, h] = tf.unstack(bbox, axis=_axis)
   y_min = y - 0.5 * h
