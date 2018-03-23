@@ -65,7 +65,7 @@ def block8(net, scale=1.0, activation_fn=tf.nn.relu, scope=None, reuse=None):
         if activation_fn:
             net = activation_fn(net)
     return net
-  
+
 def reduction_a(net, k, l, m, n):
     with tf.variable_scope('Branch_0'):
         tower_conv = slim.conv2d(net, n, 3, stride=2, padding='VALID',
@@ -104,7 +104,7 @@ def reduction_b(net):
     net = tf.concat([tower_conv_1, tower_conv1_1,
                         tower_conv2_2, tower_pool], 3)
     return net
-  
+
 def inference(images, keep_probability=0.8, phase_train=True,bottleneck_layer_size=128, weight_decay=0.0, reuse=None):
     batch_norm_params = {
         # Decay for the moving averages.
@@ -116,7 +116,7 @@ def inference(images, keep_probability=0.8, phase_train=True,bottleneck_layer_si
         # Moving averages ends up in the trainable variables collection
         'variables_collections': [ tf.GraphKeys.TRAINABLE_VARIABLES ],
     }
-    
+
     with slim.arg_scope([slim.conv2d, slim.fully_connected],
                         weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
                         weights_regularizer=slim.l2_regularizer(weight_decay),
@@ -129,16 +129,16 @@ def inference(images, keep_probability=0.8, phase_train=True,bottleneck_layer_si
 def inception_resnet_v1(inputs, is_training=True,
                         dropout_keep_prob=0.8,
                         bottleneck_layer_size=128,
-                        reuse=None, 
+                        reuse=None,
                         scope='inference'):
     end_points = {}
-  
+
     with tf.variable_scope(scope, 'inference', [inputs], reuse=reuse):
         with slim.arg_scope([slim.batch_norm, slim.dropout],
                             is_training=is_training):
             with slim.arg_scope([slim.conv2d, slim.max_pool2d, slim.avg_pool2d],
                                 stride=1, padding='SAME'):
-      
+
                 # 149 x 149 x 32
                 net = slim.conv2d(inputs, 32, 3, stride=2, padding='VALID',
                                   scope='Conv2d_1a_3x3')
@@ -166,45 +166,45 @@ def inception_resnet_v1(inputs, is_training=True,
                 net = slim.conv2d(net, 256, 3, stride=2, padding='VALID',
                                   scope='Conv2d_4b_3x3')
                 end_points['Conv2d_4b_3x3'] = net
-                
+
                 # 5 x Inception-resnet-A
                 net = slim.repeat(net, 5, block35, scale=0.17)
                 end_points['Mixed_5a'] = net
-        
+
                 # Reduction-A
                 with tf.variable_scope('Mixed_6a'):
                     net = reduction_a(net, 192, 192, 256, 384)
                 end_points['Mixed_6a'] = net
-                
+
                 # 10 x Inception-Resnet-B
                 net = slim.repeat(net, 10, block17, scale=0.10)
                 end_points['Mixed_6b'] = net
-                
+
                 # Reduction-B
                 with tf.variable_scope('Mixed_7a'):
                     net = reduction_b(net)
                 end_points['Mixed_7a'] = net
-                
+
                 # 5 x Inception-Resnet-C
                 net = slim.repeat(net, 5, block8, scale=0.20)
                 end_points['Mixed_8a'] = net
-                
+
                 net = block8(net, activation_fn=None)
                 end_points['Mixed_8b'] = net
-                
+
                 with tf.variable_scope('PreLogits'):
                     end_points['PrePool'] = net
                     #pylint: disable=no-member
                     net = slim.avg_pool2d(net, net.get_shape()[1:3], padding='VALID',
                                           scope='AvgPool_1a_8x8')
                     net = slim.flatten(net)
-          
+
                     net = slim.dropout(net, dropout_keep_prob, is_training=is_training,
                                        scope='Dropout')
-          
+
                     end_points['PreLogitsFlatten'] = net
-                
-                net = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None, 
+
+                net = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None,
                         scope='Bottleneck', reuse=False)
-  
+                print (net)
     return net, end_points

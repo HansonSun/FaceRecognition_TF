@@ -18,7 +18,7 @@ def single_model_runtime(net,img_w,img_h,img_c,device):
         tf_device="/cpu:0"
 
     with tf.device(tf_device):
-        phase_train_placeholder = tf.placeholder(tf.bool, name='phase_train') 
+        phase_train_placeholder = tf.placeholder(tf.bool, name='phase_train')
         image_input_placeholder= tf.placeholder(tf.float32,shape=[1,img_h,img_w,img_c],name="input")
         network = importlib.import_module(net)
         prelogits,_ = network.inference(image_input_placeholder,phase_train=phase_train_placeholder)
@@ -30,7 +30,7 @@ def single_model_runtime(net,img_w,img_h,img_c,device):
             img=cv2.imread("time.jpg")
             img=img.astype(np.float32)
             img=cv2.resize(img,(img_w,img_h))
-            img=np.reshape(img,(1,img_w,img_h,img_c))
+            img=np.reshape(img,(1,img_h,img_w,img_c))
             total_time=0.0
             for i in range(10):
                 start_t=time.time()
