@@ -27,7 +27,11 @@ def single_model_runtime(net,img_w,img_h,img_c,device):
 
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
-            img=cv2.imread("time.jpg")
+            if img_c==1:
+                img=cv2.imread("time.jpg",0)
+            else:
+                img=cv2.imread("time.jpg")
+
             img=img.astype(np.float32)
             img=cv2.resize(img,(img_w,img_h))
             img=np.reshape(img,(1,img_h,img_w,img_c))

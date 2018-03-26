@@ -14,12 +14,12 @@ def _depthwise_separable_conv(inputs,num_pwc_filters,width_multiplier,sc,downsam
                                                 kernel_size=[3, 3],
                                                 scope=sc+'/depthwise_conv')
 
-    bn = slim.batch_norm(depthwise_conv, scope=sc+'/dw_batch_norm')
+    bn = slim.batch_norm(depthwise_conv, updates_collections=None,variables_collections=[ tf.GraphKeys.TRAINABLE_VARIABLES ],scope=sc+'/dw_batch_norm')
     pointwise_conv = slim.convolution2d(bn,
                                       num_pwc_filters,
                                       kernel_size=[1, 1],
                                       scope=sc+'/pointwise_conv')
-    bn = slim.batch_norm(pointwise_conv, scope=sc+'/pw_batch_norm')
+    bn = slim.batch_norm(pointwise_conv,updates_collections=None,variables_collections=[ tf.GraphKeys.TRAINABLE_VARIABLES ], scope=sc+'/pw_batch_norm')
     return bn
 
 
@@ -27,7 +27,7 @@ def _depthwise_separable_conv(inputs,num_pwc_filters,width_multiplier,sc,downsam
 def inference(images,
               keep_probability=0,
               phase_train=True,
-              bottleneck_layer_size=128,
+              bottleneck_layer_size=512,
               weight_decay=0.0,
               reuse=None,
               width_multiplier=1):
@@ -43,7 +43,7 @@ def inference(images,
                           activation_fn=tf.nn.relu,
                           fused=True):
                 net = slim.convolution2d(images, round(32 * width_multiplier), [3, 3], stride=2, padding='SAME', scope='conv_1')
-                net = slim.batch_norm(net, scope='conv_1/batch_norm')
+                net = slim.batch_norm(net,updates_collections=None,variables_collections=[ tf.GraphKeys.TRAINABLE_VARIABLES ], scope='conv_1/batch_norm')
                 net = _depthwise_separable_conv(net, 64, width_multiplier, sc='conv_ds_2')
                 net = _depthwise_separable_conv(net, 128, width_multiplier, downsample=True, sc='conv_ds_3')
                 net = _depthwise_separable_conv(net, 128, width_multiplier, sc='conv_ds_4')
@@ -65,4 +65,4 @@ def inference(images,
                 net = tf.squeeze(net, [1, 2], name='SpatialSqueeze')
                 logits = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None, scope='fc_16')
 
-  return logits, end_points
+    return logits, end_points

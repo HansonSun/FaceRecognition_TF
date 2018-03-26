@@ -35,18 +35,13 @@ def inference(images,keep_probability=0.8,phase_train=True,scope="inference",wei
                 f = filters[i]
 
                 body = slim.conv2d(body,f, [3, 3], stride=2,scope= "conv%d_%d"%(i+1, 1))
-                print body
                 idx = 2
                 for j in xrange(units[i]):
                     _body = slim.conv2d(body,f, [3, 3], stride=1,scope= "conv%d_%d"%(i+1, idx))
-                    print _body
                     idx+=1
                     _body = slim.conv2d(_body, f, [3, 3], stride=1,scope= "conv%d_%d"%(i+1, idx))
-                    print _body
                     idx+=1
                     body = body+_body
             body=slim.flatten(body)
-            print body
             body = slim.fully_connected(body, bottleneck_layer_size,scope='Bottleneck', reuse=False)
-            print body
             return body,end_poins

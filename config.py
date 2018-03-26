@@ -1,38 +1,31 @@
 import tensorflow as tf
 
-
 ##-----------------train process parameter-----------------------##
 #training dataset path list
 training_dateset = ["/home/hanson/dataset/VGGFACE2/train_align"]
-train_batch_size=64
-train_input_width=170
-train_input_height=170
+train_batch_size=128
+train_input_width=128
+train_input_height=128
 train_input_channel=3    #rgb:3  gray:1
 #max epochs
-epochs=1000
+epochs=100
 display_iter=10
 max_iter=1000000
 snapshot=1000
 models_dir=""
 logs_dir=""
 train_net="squeezenet"
-##--------------------------------------------------------------##
-
-
-##---------------test process parameter-------------------------##
-#testing data path list
-testing_dataset  = ["/home/hanson/dataset/test_align_128x128"]
-test_batch_size=128
-test_input_width=128
-test_input_height=128
-test_input_channel=3
-test_interval= 1000
+emb_size=256
 ##--------------------------------------------------------------##
 
 ##--------------benchmark test----------------------------------##
-lfw_root_path="/home/hanson/valid_dataset/LFW/lfw_align_160x160"
+test_lfw=1
+lfw_root_path="/home/hanson/valid_dataset/LFW/lfw_align_112x112"
+test_agedb=0
 agedb_root_path="/home/hanson/valid_dataset/AGEDB"
-cfp_root_path="/home/hanson/valid_dataset/CFP"
+test_cfp=0
+cfp_root_path="/home/hanson/valid_dataset/CFP/Images_112x112"
+test_youtubeface=0
 youtube_root_path="home/hanson/valid_dataset/YOUTUBE"
 ##--------------------------------------------------------------##
 
@@ -45,21 +38,24 @@ optimizer_list=['ADAGRAD','ADADELTA','ADAM','RMSPROP','MOM']
 optimizer=optimizer_list[2]
 
 moving_average_decay=0.9999
-weight_decay=5e-5 
+weight_decay=5e-5
 ##--------------------------------------------------------------##
 
 
 ##---------------------Data Augment-----------------------------##
 #open random crop
 random_crop=1
-crop_width=160
-crop_height=160
+crop_width=112
+crop_height=112
+
+inference_image_width=crop_width if random_crop else train_input_width
+inference_image_height=crop_height if random_crop else train_input_height
 
 #random rotate
 random_rotate=0
 rotate_angle_range=[-90,90]
 
-#random flip 
+#random flip
 random_flip=1
 
 #random brigtness
@@ -70,7 +66,7 @@ max_brightness=0.2
 random_color_hue=0
 max_hue=0
 
-#random contrast 
+#random contrast
 random_color_contrast=0
 contrast_range=[0.5,1.5]
 
@@ -84,6 +80,6 @@ normtype=-1
 ##----------------------------------------------------------------##
 
 ##-----------------------center loss------------------------------##
-centerloss_lambda=0.003
+centerloss_lambda=0
 centerloss_alpha=0.9
 ##----------------------------------------------------------------##

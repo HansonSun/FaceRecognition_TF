@@ -125,7 +125,7 @@ def residual_unit_v1(data, num_filter, stride, dim_match, name, bottle_neck, **k
           else:
               conv1sc = slim.conv2d(data, num_filter,[1,1],biases_initializer=None, stride=stride,scope=name+'_conv1sc')
               shortcut = slim.batch_norm(conv1sc, center=True,scale=True,decay=bn_mom, epsilon=2e-5, scope=name + '_sc')
-          
+
           output=tf.concat([bn2 ,shortcut],3)
           return tflearn.prelu(output)
 
@@ -249,7 +249,7 @@ def residual_unit_v2(data, num_filter, stride, dim_match, name, bottle_neck, **k
               shortcut = data
           else:
               shortcut = slim.conv2d(act1, num_filter, [1,1], stride=stride, biases_initializer=None,scope=name+'_sc')
-          
+
           output=tf.concat([conv2,shortcut],3)
           return output
 
@@ -334,12 +334,12 @@ def residual_unit_v3_x(data, num_filter, stride, dim_match, name, bottle_neck, *
       bn1 = slim.batch_norm(data, center=True,scale=True, epsilon=2e-5, decay=bn_mom, scope=name + '_bn1')
       #conv1 = slim.conv2d(bn1, int(num_filter*0.5), [1,1],padding="VALID",biases_initializer=None,scope=name + '_conv1')
       conv1 = tflearn.layers.conv.grouped_conv_2d(bn1, num_group, int(num_filter*0.5), kernel=(3,3), stride=(1,1),biases_initializer=None,scope=name + '_conv2')
-      
+
       bn2 = slim.batch_norm(conv1, center=True,scale=True,epsilon=2e-5, decay=bn_mom, scope=name + '_bn2')
       act1 = tflearn.prelu(bn2)
       conv2 = slim.conv2d(act1, int(num_filter*0.5), [3,3],biases_initializer=None,scope=name + '_conv2')
       #conv2 = tfleaen.grouped_conv_2d(act1, num_group, int(num_filter*0.5), kernel=(3,3), stride=(1,1),biases_initializer=None,scope=name + '_conv2')
-      
+
       bn3 = slim.batch_norm(conv2,center=True,scale=True,  epsilon=2e-5, decay=bn_mom, scope=name + '_bn3')
       act2 = tflearn.prelu(bn3)
       conv3 = slim.conv2d(act2, num_filter,[1,1], stride=stride,padding="VALID",scope=name + '_conv3')
@@ -368,7 +368,7 @@ def residual_unit_v3_x(data, num_filter, stride, dim_match, name, bottle_neck, *
       return bn4 + shortcut
 
 def residual_unit_v4(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs):
-    
+
     use_se = kwargs.get('version_se', 1)
     bn_mom = kwargs.get('bn_mom', 0.9)
     is_training=kwargs.get('phase_train',True)
@@ -475,7 +475,7 @@ def resnet(images,units,num_stages, filter_list, bottle_neck, bottleneck_layer_s
         body = slim.batch_norm(body,center=True,scale=True,epsilon=2e-5,decay=bn_mom,scope='bn0')
         body = tflearn.prelu(body)
 
-    
+
     for i in range(num_stages):
       if version_input==0:
         body = residual_unit(body, filter_list[i+1], (1 if i==0 else 2, 1 if i==0 else 2), False,
@@ -491,7 +491,7 @@ def resnet(images,units,num_stages, filter_list, bottle_neck, bottleneck_layer_s
     fc1 = get_fc1(body, bottleneck_layer_size, fc_type)
     return fc1
 
-def inference(images,phase_train=True,num_layers=34,bottleneck_layer_size=256, **kwargs):
+def inference(images,phase_train=True,num_layers=100,bottleneck_layer_size=256, **kwargs):
     end_points={}
     if num_layers >= 101:
         filter_list = [64, 256, 512, 1024, 2048]
