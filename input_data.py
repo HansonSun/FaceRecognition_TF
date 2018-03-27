@@ -4,11 +4,11 @@ from facetools.dataset import *
 import cv2
 import numpy as np
 from scipy import misc
-import config 
-  
+import config
+
 def random_rotate_image(image,lowangle,highangle):
 	angle = np.random.uniform(lowangle,highangle)
-	return misc.imrotate(image, angle, 'bicubic') 
+	return misc.imrotate(image, angle, 'bicubic')
 
 def resize_image(image,resize_w,resize_h):
 	image=cv2.resize(image,(resize_w,resize_h))
@@ -17,6 +17,90 @@ def resize_image(image,resize_w,resize_h):
 def cvtcolor_image(image):
 	image=cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
 	return image
+
+def tfrecord_parse_function(example_proto):
+    features = {'image_raw': tf.FixedLenFeature([], tf.string),
+                'label': tf.FixedLenFeature([], tf.int64)}
+    features = tf.parse_single_example(example_proto, features)
+    # You can do more image distortion here for training data
+    img = tf.image.decode_jpeg(features['image_raw'])
+    img = tf.reshape(img, shape=(112, 112, 3))
+    r, g, b = tf.split(img, num_or_size_splits=3, axis=-1)
+    img = tf.concat([b, g, r], axis=-1)
+    #img = tf.cast(img, dtype=tf.float32)
+    #img = tf.subtract(img, 127.5)
+    #img = tf.multiply(img,  0.0078125)
+    img = tf.image.random_flip_left_right(img)
+    label = tf.cast(features['label'], tf.int64)
+    return img, label
+
+def text_parse_function(imgpath, label):
+    value=tf.read_file(imgpath)
+    image=tf.image.decode_image(value,channels=3)
+
+    #convert the color
+    if config.train_input_channel==1:
+        image = tf.py_func(cvtcolor_image, [image], tf.uint8)
+
+     #resize the image
+    image = tf.py_func(resize_image, [image,config.train_input_width,config.train_input_height], tf.uint8)
+
+    #random crop the image
+    if config.random_crop==1:
+        if config.crop_height>config.train_input_height or config.crop_width>config.train_input_width:
+            print ("crop size must <= input size")
+            exit()
+        if(config.train_input_channel==1):
+            image = tf.random_crop(image, [config.crop_height,config.crop_width])
+        else:
+            image = tf.random_crop(image, [config.crop_height, config.crop_width,config.train_input_channel])
+        config.train_input_width=config.crop_width
+        config.train_input_height=config.crop_height
+
+
+    #random the image
+    if config.random_flip==1:
+        image = tf.image.random_flip_left_right(image)
+
+    #random rotate the image
+    if config.random_rotate==1:
+        image = tf.py_func(random_rotate_image, [image,config.rotate_angle_range[0],config.rotate_angle_range[1]], tf.uint8)
+
+    #random color brightness
+    if config.random_color_brightness==1:
+        image=tf.image.random_brightness(image,config.max_brightness)
+
+    #random color saturation
+    if config.random_color_saturation==1:
+        image=tf.image.random_saturation(image,lower=config.saturaton_range[0],upper=config.saturaton_range[1])
+
+    #random color hue
+    if config.random_color_hue==1:
+        image=tf.image.random_hue(image,config.max_hue)
+
+    #random color contrast
+    if config.random_color_contrast==1:
+        image=tf.image.random_contrast(image,lower=config.contrast_range[0],upper=config.contrast_range[1])
+
+    #tell tf tensor's shape
+    if config.train_input_channel==1:
+        image.set_shape((config.train_input_height,config.train_input_width))
+    else :
+        image.set_shape((config.train_input_height,config.train_input_width,config.train_input_channel))
+
+    image = tf.cast(image, tf.float32)
+    # standardize the image
+    if config.normtype==0:
+        image=tf.image.per_image_standardization(image)
+    elif config.normtype==1:
+        image = tf.subtract(image,127.5)
+        image=tf.div(image,128.0)
+    elif config.normtype==2:
+        image=tf.div(image,255.0)
+
+    image_batch = tf.cast(image_batch, tf.float32)
+    return image,label
+
 
 def GetPLFromImg(datasetpath):
 
@@ -57,8 +141,8 @@ def GetPLFromImg(datasetpath):
 	else :
 		image.set_shape((config.train_input_width,config.train_input_height,config.train_input_channel))
 
-	min_after_dequeue = 1000  
-	capacity = min_after_dequeue + config.train_batch_size  
+	min_after_dequeue = 1000
+	capacity = min_after_dequeue + config.train_batch_size
 
 	image_batch,label_batch=tf.train.shuffle_batch([image,labels],batch_size=config.train_batch_size,num_threads= 10,capacity = capacity,min_after_dequeue=min_after_dequeue)
 	image_batch = tf.cast(image_batch, tf.float32)
@@ -76,8 +160,8 @@ def GetPLFromCsv(datasetpath):
 
     reader = tf.TextLineReader()
     key,value = reader.read(filename_queue)
-    record_defaults = [[""], [1]] 
-    imgpath, label = tf.decode_csv(value, record_defaults=record_defaults) 
+    record_defaults = [[""], [1]]
+    imgpath, label = tf.decode_csv(value, record_defaults=record_defaults)
 
     value=tf.read_file(imgpath)
     image=tf.image.decode_image(value,channels=3)
@@ -122,7 +206,7 @@ def GetPLFromCsv(datasetpath):
     if config.random_color_hue==1:
         image=tf.image.random_hue(image,config.max_hue)
 
-    #random color contrast 
+    #random color contrast
     if config.random_color_contrast==1:
         image=tf.image.random_contrast(image,lower=config.contrast_range[0],upper=config.contrast_range[1])
 
@@ -142,8 +226,8 @@ def GetPLFromCsv(datasetpath):
     elif config.normtype==2:
         image=tf.div(image,255.0)
 
-    min_after_dequeue = 1000  
-    capacity = min_after_dequeue + config.train_batch_size  
+    min_after_dequeue = 1000
+    capacity = min_after_dequeue + config.train_batch_size
 
     image_batch,label_batch=tf.train.shuffle_batch([image,label],batch_size=config.train_batch_size,num_threads= 10,capacity = capacity,
         min_after_dequeue=min_after_dequeue,allow_smaller_final_batch=True)
@@ -152,7 +236,7 @@ def GetPLFromCsv(datasetpath):
 
     return image_batch,label_batch,dataset.total_identity,dataset.total_img_num
 
-  
+
 def runtest(reader_func):
     image_batch,label_batch,_,_=reader_func( ["/home/hanson/dataset/test_align_128x128"] )
     with tf.Session() as sess:

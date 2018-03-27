@@ -5,19 +5,22 @@ sys.path.append("./nets")
 import tensorflow as tf
 import numpy as np
 import cv2
-from facetools import fr_validate
+from facetools.fr_validate import fr_validate
 import importlib
 from tensorflow.python.framework import graph_util
 import config
 import toolfunc
-
+from facetools import faceutils as fu
+import scipy
 
 class benchmark_validate():
-    def __init__(self):
+    def __init__(self,model_dir):
         with tf.Graph().as_default():
             self.sess=tf.Session()
-            model_dir_exp = os.path.expanduser(config.models_dir)
-            meta_file, ckpt_file = toolfunc.get_model_filenames(model_dir_exp)
+            model_dir_exp = os.path.expanduser(model_dir)
+            ckpt=tf.train.get_checkpoint_state(model_dir)
+            ckpt_file=os.path.basename(ckpt.model_checkpoint_path)
+            meta_file=ckpt_file+".meta"
 
             saver = tf.train.import_meta_graph(os.path.join(model_dir_exp, meta_file), clear_devices=True)
             self.sess.run(tf.global_variables_initializer())
@@ -44,14 +47,9 @@ class benchmark_validate():
             return y
 
     def compare2face(self,path_l,path_r):
-        if config.random_crop==1:
-            img_w=config.crop_width
-            img_h=config.crop_height
-            img_ch=config.train_input_channel
-        else:
-            img_w=config.train_input_width
-            img_h=config.train_input_height
-            img_ch=config.train_input_channel
+        img_w=config.input_img_width
+        img_h=config.input_img_height
+        img_ch=config.input_img_channel
 
         images = np.zeros((2, img_w, img_h, img_ch))
         for index,i in enumerate([path_l,path_r]):
@@ -62,18 +60,18 @@ class benchmark_validate():
             images[index,:,:,:] = self.preprocess_image(img)
 
         feed_dict = { self.images_placeholder:images, self.phase_train_placeholder:False }
-        result = self.sess.run(self.embeddings ,feed_dict=feed_dict)
-        diff = np.subtract(result[0], result[1])
-        similarity = np.sum(np.square(diff))
-        return  similarity
+        feature_array = self.sess.run(self.embeddings ,feed_dict=feed_dict)
+
+        normlized_feature_array=fu.normlize_feature(feature_array)
+        similarity_distance=scipy.spatial.distance.euclidean(normlized_feature_array[0], normlized_feature_array[1])
+        return similarity_distance
 
 
-def test_lfw():
-    print ("|---------------ready to test lfw------------------------|")
-    demo=benchmark_validate()
-    lfw=fr_validate(test_lfw=1,test_cfp=0)
-    lfw.top_accurate(demo)
-    print ("|-------------------test lfw done-----------------------------|")
+def test_benchmark(model_dir):
+    demo=benchmark_validate(model_dir)
+    benchmark=fr_validate(test_lfw=1,test_cfp=1)
+    return benchmark.top_accurate(demo)
+
 
 if __name__ == "__main__":
-    test_lfw()
+    test_benchmark("/home/hanson/work/Facerecognize_TF/models/20180327-100239")
