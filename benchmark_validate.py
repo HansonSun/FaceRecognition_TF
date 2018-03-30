@@ -32,26 +32,25 @@ class benchmark_validate():
             self.embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
             self.phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
 
-    def preprocess_image(self,x,normtype=config.normtype):
-        if normtype==0:
+    def preprocess_image(self,x,normtype=config.process_type):
+        if config.process_type==0:
             mean = np.mean(x)
             std = np.std(x)
             std_adj = np.maximum(std, 1.0/np.sqrt(x.size))
             y = np.multiply(np.subtract(x, mean), 1/std_adj)
             return y
-        elif normtype==1:
+        elif config.process_type==1:
             y=(x-127.5)/128
             return y
-        elif normtype==2:
+        elif config.process_type==2:
             y=x/255.0
             return y
 
     def compare2face(self,path_l,path_r):
         img_w=config.input_img_width
         img_h=config.input_img_height
-        img_ch=config.input_img_channel
 
-        images = np.zeros((2, img_w, img_h, img_ch))
+        images = np.zeros((2, img_w, img_h, 3))
         for index,i in enumerate([path_l,path_r]):
             img=cv2.imread(i)
             img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)

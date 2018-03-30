@@ -178,7 +178,6 @@ def main( ):
                     learning_rate_placeholder, phase_train_placeholder, batch_size_placeholder, global_step,
                     total_loss, train_op, summary_op, summary_writer, regularization_losses, config.learning_rate_schedule_file)
 
-                #filename = "%s_%d[lfw=%.1f,cff=%.1f,cfp=%.1f].cpkt"%(config.train_net,iter,acc_dict["lfw_acc"],acc_dict["cff_acc"],acc_dict["cfp_acc"])
                 filename = os.path.join(model_dir, "%d.cpkt"%step)
                 saver.save(sess, filename)
                 acc_dict=test_benchmark(model_dir)

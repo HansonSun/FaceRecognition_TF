@@ -1,20 +1,22 @@
 import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list
-training_dateset = "/home/hanson/dataset/VGGFACE2/train_align/"
-batch_size=100
-dateset_img_width=128
-dateset_img_height=128
-dateset_img_channel=3    #rgb:3  gray:1
+training_dateset = "/home/hanson/dataset/CASIA/CASIA-WebFace_align_96x112"
+num_output=10575
+
+batch_size=128
+dataset_img_width=128
+dataset_img_height=128
+display_iter=10
+save_iter=1000
+
 max_nrof_epochs=1000
 epoch_size=1000
-display_iter=10
-max_iter=20
-snapshot=1000
 models_dir="models/"
 logs_dir="logs/"
-train_net="inception_resnet_v1"
+train_net="squeezenet"
 embedding_size=128
+
 ##--------------------------------------------------------------##
 
 ##--------------benchmark test----------------------------------##
@@ -29,7 +31,7 @@ youtube_root_path="home/hanson/valid_dataset/YOUTUBE"
 ##--------------------------------------------------------------##
 
 ##--------------------hyper parameter---------------------------##
-learning_rate=-1  #if learning_rate is -1,use learning_rate schedule file
+learning_rate=0.01  #if learning_rate is -1,use learning_rate schedule file
 learning_rate_decay_step=1000
 learning_rate_decay_rate=0.96
 learning_rate_schedule_file="lr_schedule/learning_rate_schedule_classifier_casia.txt"
@@ -49,9 +51,9 @@ random_crop=1
 crop_img_width=112
 crop_img_height=112
 
-input_img_width=crop_img_width if random_crop else dateset_img_width
-input_img_height=crop_img_height if random_crop else dateset_img_height
-input_img_channel=dateset_img_channel
+input_img_width=crop_img_width if random_crop else dataset_img_width
+input_img_height=crop_img_height if random_crop else dataset_img_height
+
 #random rotate
 random_rotate=0
 rotate_angle_range=[-90,90]
@@ -75,11 +77,11 @@ contrast_range=[0.5,1.5]
 random_color_saturation=0
 saturaton_range=[0.5,1.5]
 
-#normtype
-normtype=0
+#image preprocess type
+process_type=1
 ##----------------------------------------------------------------##
 
 ##-----------------------center loss------------------------------##
-center_loss_lambda=1e-2
+center_loss_lambda=0
 center_loss_alpha=0.9
 ##----------------------------------------------------------------##

@@ -1,2 +1,4 @@
 *.pyc
-model/
+models/
+logs/
+tfrecord_dataset/

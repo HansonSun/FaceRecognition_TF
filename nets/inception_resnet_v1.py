@@ -206,5 +206,4 @@ def inception_resnet_v1(inputs, is_training=True,
 
                 net = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None,
                         scope='Bottleneck', reuse=False)
-                print (net)
     return net, end_points
