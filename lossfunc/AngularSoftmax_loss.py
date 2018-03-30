@@ -2,17 +2,19 @@ import tensorflow as tf
 
 def Loss_ASoftmax(x, y, l, num_cls, m = 2, name = 'asoftmax'):
     '''
+    https://arxiv.org/abs/1704.08063
+    SphereFace: Deep Hypersphere Embedding for Face Recognition
     x: B x D - data
     y: B x 1 - label
-    l: 1 - lambda 
+    l: 1 - lambda
     '''
     xs = x.get_shape()
-    w = tf.get_variable("asoftmax/W", [xs[1], num_cls], dtype=tf.float32, 
+    w = tf.get_variable("asoftmax/W", [xs[1], num_cls], dtype=tf.float32,
             initializer=tf.contrib.layers.xavier_initializer())
 
     eps = 1e-8
 
-    xw = tf.matmul(x,w) 
+    xw = tf.matmul(x,w)
 
     if m == 0:
         return xw, tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=xw))
@@ -20,7 +22,7 @@ def Loss_ASoftmax(x, y, l, num_cls, m = 2, name = 'asoftmax'):
     w_norm = tf.norm(w, axis = 0) + eps
     logits = xw/w_norm
 
-    if y is None: 
+    if y is None:
         return logits, None
 
     ordinal = tf.constant(list(range(0, xs[0])), tf.int64)
@@ -58,7 +60,7 @@ def Loss_ASoftmax(x, y, l, num_cls, m = 2, name = 'asoftmax'):
 
         f = 1.0/(1.0+l)
         ff = 1.0 - f
-        comb_logits_diff = tf.add(logits, tf.scatter_nd(ordinal_y, tf.subtract(scaled_logits, sel_logits), logits.get_shape())) 
+        comb_logits_diff = tf.add(logits, tf.scatter_nd(ordinal_y, tf.subtract(scaled_logits, sel_logits), logits.get_shape()))
         updated_logits = ff*logits + f*comb_logits_diff
 
         loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=updated_logits))

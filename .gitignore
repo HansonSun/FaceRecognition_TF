@@ -2,3 +2,4 @@
 models/
 logs/
 tfrecord_dataset/
+release_pb/
