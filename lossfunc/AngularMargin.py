@@ -1,0 +1,143 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import tensorflow as tf
+import tensorflow.contrib.eager as tfe
+import numpy as np
+
+def cal_loss2(embeddings,
+                        labels,
+                        nrof_classes,
+                        w_init=tf.contrib.layers.xavier_initializer(uniform=False),
+                        m = 2):
+    '''
+    paper:<'SphereFace: Deep Hypersphere Embedding for Face Recognition'>
+    AngularMargin loss as described in : https://arxiv.org/abs/1704.08063
+    embeddings : normalized embedding layer of Facenet, it's normalized value of output of resface
+    labels : ground truth label of current training batch
+    nrof_classes: number of classes
+    '''
+    eps = 1e-8
+    weights = tf.get_variable(name='AngularMargin_weights', shape=(embeddings.get_shape().as_list()[-1], nrof_classes),
+                              initializer=w_init, dtype=tf.float32)
+    #define emb*weight = |emb|*|weight|*cos(theta)
+    emb_weights = tf.matmul(embeddings,weights)
+    if m == 0:
+        return emb_weights
+    #|weight|
+    weights_norm = tf.norm(weights, axis = 0) + eps
+    #|emb|*cos(theta)
+    emb_cos_t = tf.div(emb_weights, weights_norm)
+    #|emb|
+    embeddings_norm = tf.norm(embeddings, axis = 1) + eps
+    #cos(theta)
+    print emb_cos_t
+    print embeddings_norm
+    cos_theta = tf.div(emb_cos_t, embeddings_norm)
+
+    if m == 1:
+        logits=emb_cos_t
+        loss=tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels),name="loss")
+
+    else:
+        if m == 2:
+            #cos(2*theta)=2cos(theta)^2-1
+            psi_theta = 2*tf.multiply(tf.sign(cos_theta), tf.square(cos_theta)) - 1
+
+        elif m == 4:
+            #cos(4*theta)=1+(-8*cos(theta)^2+8*cos(theta)^4)
+            cos_theta_2 = tf.square(cos_theta)
+            cos_theta_4 = tf.pow(cos_theta, 4)
+            sign0 = tf.sign(cos_theta)
+            sign3 = tf.multiply(tf.sign(2*cos_theta_2 - 1), sign0)
+            sign4 = 2*sign0 + sign3 - 3
+            psi_theta = sign3*(8*cos_theta_4 - 8*cos_theta_2 + 1) + sign4
+        else:
+            raise ValueError('unsupported value of m')
+
+        #|emb|psi(theta)
+        emb_psi_t = tf.multiply(psi_theta, embeddings_norm)
+        logits=tf.where(tf.equal(tf.one_hot(labels,nrof_classes),1),emb_psi_t,emb_cos_t)
+        loss=tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels),name="loss")
+
+    return logits,loss
+
+
+def cal_loss(x, y,num_cls, m = 2, name = 'asoftmax',l=0):
+    '''
+    x: B x D - data
+    y: B x 1 - label
+    l: 1 - lambda
+    '''
+    xs = x.get_shape()
+    w = tf.get_variable("asoftmax/W", [xs[1], num_cls], dtype=tf.float32,
+            initializer=tf.contrib.layers.xavier_initializer())
+
+    eps = 1e-8
+
+    xw = tf.matmul(x,w)
+
+    if m == 0:
+        return xw, tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=xw))
+
+    w_norm = tf.norm(w, axis = 0) + eps
+
+    logits = xw/w_norm
+    print logits
+
+    if y is None:
+        return logits, None
+
+    ordinal = tf.constant(list(range(0, xs[0])), tf.int64)
+    ordinal_y = tf.stack([ordinal, y], axis = 1)
+
+    x_norm = tf.norm(x, axis = 1) + eps
+
+    sel_logits = tf.gather_nd(logits, ordinal_y)
+    print sel_logits
+    print x_norm
+    cos_th = tf.div(sel_logits, x_norm)
+
+    if m == 1:
+
+        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits))
+
+    else:
+
+        if m == 2:
+
+            cos_sign = tf.sign(cos_th)
+            res = 2*tf.multiply(tf.sign(cos_th), tf.square(cos_th)) - 1
+
+        elif m == 4:
+
+            cos_th2 = tf.square(cos_th)
+            cos_th4 = tf.pow(cos_th, 4)
+            sign0 = tf.sign(cos_th)
+            sign3 = tf.multiply(tf.sign(2*cos_th2 - 1), sign0)
+            sign4 = 2*sign0 + sign3 - 3
+            res = sign3*(8*cos_th4 - 8*cos_th2 + 1) + sign4
+        else:
+            raise ValueError('unsupported value of m')
+
+        scaled_logits = tf.multiply(res, x_norm)
+
+        f = 1.0/(1.0+l)
+        ff = 1.0 - f
+        comb_logits_diff = tf.add(logits, tf.scatter_nd(ordinal_y, tf.subtract(scaled_logits, sel_logits), logits.get_shape()))
+        updated_logits = ff*logits + f*comb_logits_diff
+
+        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=updated_logits))
+
+        return logits, loss
+
+def cal_loss_test( ):
+    tfe.enable_eager_execution()
+    embedding=tf.ones((3,3),dtype=tf.float32)
+    labels=np.arange(0,3,1)
+    nrof_classes=3
+    w_init_method=tf.random_normal_initializer(seed=666)
+    logit,loss=cal_loss(embedding, labels, nrof_classes,w_init=w_init_method)
+    print loss
+
+if __name__ == "__main__":
+    cal_loss_test()
