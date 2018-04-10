@@ -1,7 +1,7 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import sys
-sys.path.append("./nets")
+sys.path.append("nets")
 sys.path.append("lossfunc")
 import numpy as np
 import tensorflow as tf
@@ -44,8 +44,8 @@ def run_training():
     models_dir = os.path.join(os.path.expanduser(config.models_dir), subdir)
     if not os.path.isdir(config.models_dir):  # Create the model directory if it doesn't exist
         os.makedirs(config.models_dir)
-    topn_models_dir = os.path.join(models_dir,"topn")#topn die used for save top accuracy model
-    if not os.path.isdir(topn_models_dir):  # Create the model directory if it doesn't exist
+    topn_models_dir = os.path.join(models_dir,"topn")#topn dir used for save top accuracy model
+    if not os.path.isdir(topn_models_dir):  # Create the topn model directory if it doesn't exist
         os.makedirs(topn_models_dir)
     print('Model directory: %s' % config.models_dir)
     print('Log directory: %s' % config.logs_dir)
@@ -62,7 +62,7 @@ def run_training():
     print ("trianing net:%s"%config.train_net)
     print ("input image size [h:%d w:%d c:%d]"%(config.input_img_height,config.input_img_width,3))
 
-    features,end_points = network.inference(
+    prelogits,end_points = network.inference(
         images_placeholder,
         keep_probability=config.keep_probability,
         phase_train=phase_train_placeholder,
@@ -70,27 +70,29 @@ def run_training():
         bottleneck_layer_size=config.embedding_size)
 
     if config.loss_type==0  : #softmax loss
-        logits = slim.fully_connected(features,config.nrof_classes,
+        logits = slim.fully_connected(prelogits,config.nrof_classes,
             activation_fn=None,weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
             weights_regularizer=slim.l2_regularizer(5e-5),
             scope='Logits_end',reuse=False)
+        softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels_placeholder),name="loss")
+        tf.add_to_collection('losses', softmaxloss)
     elif config.loss_type==1: #center loss
         lossfunc=importlib.import_module(config.loss_type_list[config.loss_type])
-        logits = slim.fully_connected(features,config.nrof_classes,activation_fn=None,
+        logits = slim.fully_connected(prelogits,config.nrof_classes,activation_fn=None,
             weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
             weights_regularizer=slim.l2_regularizer(5e-5),scope='Logits_end',reuse=False)
         #softmax loss
         softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels_placeholder),name="loss")
         tf.add_to_collection('losses', softmaxloss)
         #center loss
-        center_loss, _,_ = lossfunc.cal_loss(features, labels_placeholder, config.nrof_classes,alpha=config.center_loss_alpha)
-        tf.add_to_collection('losses', center_loss * config.center_loss_lambda)
+        center_loss, _,_ = lossfunc.cal_loss(prelogits, labels_placeholder, config.nrof_classes,alpha=config.Centerloss_alpha)
+        tf.add_to_collection('losses', center_loss * config.Centerloss_lambda)
     else :
         lossfunc=importlib.import_module(config.loss_type_list[config.loss_type])
-        logits,custom_loss=lossfunc.cal_loss(features,labels_placeholder,config.nrof_classes)
+        logits,custom_loss=lossfunc.cal_loss(prelogits,labels_placeholder,config.nrof_classes)
         tf.add_to_collection('losses', custom_loss)
 
-    embeddings = tf.nn.l2_normalize(features, 1, 1e-10, name='embeddings')
+    embeddings = tf.nn.l2_normalize(prelogits, 1, 1e-10, name='embeddings')
     predict_labels=tf.argmax(logits,1)
 
     #adjust learning rate
@@ -98,7 +100,6 @@ def run_training():
     learning_rate = tf.train.exponential_decay(config.learning_rate,global_step,config.learning_rate_decay_step,config.learning_rate_decay_rate,staircase=True)
 
     custom_loss=tf.get_collection("losses")
-    print custom_loss
     regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
     total_loss=tf.add_n(custom_loss+regularization_losses,name='total_loss')
 

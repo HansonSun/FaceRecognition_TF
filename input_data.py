@@ -63,7 +63,7 @@ def text_parse_function(imgpath, label):
 		img = tf.cast(img, tf.float32)
 		# standardize the image
 		if config.process_type==0:
-			img=tf.img.per_image_standardization(img)
+			img=tf.image.per_image_standardization(img)
 		elif config.process_type==1:
 			img = tf.subtract(img,127.5)
 			img=tf.div(img,128.0)
@@ -118,7 +118,7 @@ def tfrecord_parse_function(example_proto):
 		img = tf.cast(img, tf.float32)
 		# standardize the image
 		if config.normtype==0:
-			img=tf.img.per_image_standardization(img)
+			img=tf.image.per_image_standardization(img)
 		elif config.normtype==1:
 			img = tf.subtract(img,127.5)
 			img=tf.div(img,128.0)
@@ -129,24 +129,25 @@ def tfrecord_parse_function(example_proto):
 	return img, label
 
 def img_input_data(dataset_path,batch_size):
-	img_dataset=fileDatasetReader([dataset_path])
+	img_dataset=ImageDatasetReader([dataset_path])
 	img_paths,labels=img_dataset.paths_and_labels()
 	dataset=tf.data.Dataset.from_tensor_slices((img_paths,labels))
 	dataset = dataset.map(text_parse_function)
-	dataset = dataset.shuffle(buffer_size=20000)
+	dataset = dataset.shuffle(buffer_size=100000)
 	dataset = dataset.batch(batch_size)
 	iterator = dataset.make_initializable_iterator()
 	next_element = iterator.get_next()
+	config.nrof_classes=img_dataset.total_identity
 	return iterator,next_element
 
 def tfrecord_input_data(record_path,batch_size):
 	record_dataset = tf.data.TFRecordDataset(record_path)
 	record_dataset = record_dataset.map(tfrecord_parse_function)
-	record_dataset = record_dataset.shuffle(buffer_size=20000)
+	record_dataset = record_dataset.shuffle(buffer_size=100000)
 	record_dataset = record_dataset.batch(batch_size)
 	iterator = record_dataset.make_initializable_iterator()
 	next_element = iterator.get_next()
-	return iterator,next_element
+	return iterator,next_element,_
 
 
 def read_text_test():

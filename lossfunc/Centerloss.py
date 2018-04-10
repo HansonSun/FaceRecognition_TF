@@ -7,7 +7,7 @@ def cal_loss(embeddings,
              labels,
              nrof_classes,
              alpha,
-             w_init=tf.contrib.layers.xavier_initializer(uniform=False)):
+             w_init=tf.constant_initializer(0)):
     """Center loss based on the paper "A Discriminative Feature Learning Approach for Deep Face Recognition"
        (http://ydwen.github.io/papers/WenECCV16.pdf)
     """

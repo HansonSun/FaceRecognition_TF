@@ -1,15 +1,13 @@
 import tensorflow as tf
 ##-----------------train process parameter-----------------------##
-#training dataset path list
-training_dateset = "/home/hanson/dataset/CASIA/CASIA-WebFace_align_96x112"
-nrof_classes=10575
-
+#training dataset path list,if the input dataset is image dataset ,you needn't set the nrof_classes
+training_dateset = "/home/hanson/dataset/VGGFACE2/train_align"
+nrof_classes=-1
 batch_size=100
 dataset_img_width=128
 dataset_img_height=128
 display_iter=10
 save_iter=1000
-
 max_nrof_epochs=1000
 epoch_size=1000
 models_dir="models/"
@@ -17,8 +15,7 @@ logs_dir="logs/"
 train_net="squeezenet"
 embedding_size=128
 input_test_flag=0
-
-##--------------------------------------------------------------##
+topn_threshold=99.0
 
 ##--------------benchmark test----------------------------------##
 test_lfw=1
@@ -29,7 +26,6 @@ test_cfp=0
 cfp_root_path="/home/hanson/valid_dataset/CFP/Images_112x112"
 test_youtubeface=0
 youtube_root_path="home/hanson/valid_dataset/YOUTUBE"
-##--------------------------------------------------------------##
 
 ##--------------------hyper parameter---------------------------##
 learning_rate=0.01  #if learning_rate is -1,use learning_rate schedule file
@@ -44,10 +40,9 @@ moving_average_decay=0.9999
 weight_decay=5e-5
 gpu_memory_fraction=1
 nrof_preprocess_threads=4
-##--------------------------------------------------------------##
 
 ##---------------------Data Augment-----------------------------##
-#open random crop
+#open random crop,crop image size must less than dataset image size
 random_crop=1
 crop_img_width=112
 crop_img_height=112
@@ -71,16 +66,23 @@ contrast_range=[0.5,1.5]
 random_color_saturation=0
 saturaton_range=[0.5,1.5]
 #image preprocess type
-process_type=1
-##----------------------------------------------------------------##
+process_type=0
 
 ##-----------------------center loss------------------------------##
-
 loss_type_list=['softmax','Centerloss','AdditiveAngularMargin','AdditiveMargin','AngularMargin','LargeMarginCosine']
-loss_type=1
+loss_type=5
 
-#center loss param
-center_loss_lambda=1e-2
-center_loss_alpha=0.9
-
-##----------------------------------------------------------------##
+#Centerloss param
+Centerloss_lambda=1e-2
+Centerloss_alpha=0.9
+#AdditiveAngularMargin param
+AdditiveAngularMargin_s=64.0
+AdditiveAngularMargin_m=0.5
+#AdditiveMargin param
+AdditiveMargin_m=0.35
+AdditiveMargin_s=30
+#AngularMargin param
+AngularMargin_m=2
+#LargeMarginCosine param
+LargeMarginCosine_m=0.4
+LargeMarginCosine_s=30.0
