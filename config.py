@@ -2,9 +2,9 @@ import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list
 training_dateset = "/home/hanson/dataset/CASIA/CASIA-WebFace_align_96x112"
-num_output=10575
+nrof_classes=10575
 
-batch_size=128
+batch_size=100
 dataset_img_width=128
 dataset_img_height=128
 display_iter=10
@@ -16,6 +16,7 @@ models_dir="models/"
 logs_dir="logs/"
 train_net="squeezenet"
 embedding_size=128
+input_test_flag=0
 
 ##--------------------------------------------------------------##
 
@@ -50,38 +51,36 @@ nrof_preprocess_threads=4
 random_crop=1
 crop_img_width=112
 crop_img_height=112
-
 input_img_width=crop_img_width if random_crop else dataset_img_width
 input_img_height=crop_img_height if random_crop else dataset_img_height
-
 #random rotate
 random_rotate=0
 rotate_angle_range=[-90,90]
-
 #random flip
 random_flip=1
-
 #random brigtness
 random_color_brightness=0
 max_brightness=0.2
-
 #random hue
 random_color_hue=0
 max_hue=0
-
 #random contrast
 random_color_contrast=0
 contrast_range=[0.5,1.5]
-
 #random saturation
 random_color_saturation=0
 saturaton_range=[0.5,1.5]
-
 #image preprocess type
 process_type=1
 ##----------------------------------------------------------------##
 
 ##-----------------------center loss------------------------------##
-center_loss_lambda=0
+
+loss_type_list=['softmax','Centerloss','AdditiveAngularMargin','AdditiveMargin','AngularMargin','LargeMarginCosine']
+loss_type=1
+
+#center loss param
+center_loss_lambda=1e-2
 center_loss_alpha=0.9
+
 ##----------------------------------------------------------------##

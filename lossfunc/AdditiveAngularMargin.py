@@ -30,7 +30,6 @@ def cal_loss(embeddings,
         # inputs and weights norm
         weights = tf.get_variable(name='embedding_weights', shape=(embeddings.get_shape().as_list()[-1], nrof_classes),
                       initializer=w_init, dtype=tf.float32)
-        print weights
         weights_norm = tf.nn.l2_normalize(weights, 0, 1e-10, name='norm_weights')
         embeddings_norm = tf.nn.l2_normalize(embeddings, 1, 1e-10,name="norm_embeddings")
         #cos(theta+m)=cos(theta)*cos(m)-sin(theta)*sin(m)
@@ -61,11 +60,12 @@ def cal_loss(embeddings,
 
 def cal_loss_test( ):
     tfe.enable_eager_execution()
-    embedding=tf.ones((3,3),dtype=tf.float32)
-    labels=np.arange(0,3,1)
-    nrof_classes=3
+    embeddings=tf.get_variable(name="embeddings",dtype=tf.float32,shape=[5,16],initializer=tf.random_normal_initializer(seed=223))
+    np.random.seed(0)
+    labels=np.random.randint(0,1,size=(5))
+    nrof_classes=2
     w_init_method=tf.random_normal_initializer(seed=666)
-    logits,loss=cal_loss(embedding, labels, nrof_classes,w_init=w_init_method)
+    logits,loss=cal_loss(embeddings, labels, nrof_classes,w_init=w_init_method)
     print logits
     print loss
 

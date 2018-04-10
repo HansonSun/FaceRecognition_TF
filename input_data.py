@@ -59,15 +59,16 @@ def text_parse_function(imgpath, label):
 	if config.random_color_contrast==1:
 		img=tf.image.random_contrast(img,lower=config.contrast_range[0],upper=config.contrast_range[1])
 
-	img = tf.cast(img, tf.float32)
-	# standardize the image
-	if config.process_type==0:
-		img=tf.img.per_image_standardization(img)
-	elif config.process_type==1:
-		img = tf.subtract(img,127.5)
-		img=tf.div(img,128.0)
-	elif config.process_type==2:
-		img=tf.div(img,255.0)
+	if config.input_test_flag==0:
+		img = tf.cast(img, tf.float32)
+		# standardize the image
+		if config.process_type==0:
+			img=tf.img.per_image_standardization(img)
+		elif config.process_type==1:
+			img = tf.subtract(img,127.5)
+			img=tf.div(img,128.0)
+		elif config.process_type==2:
+			img=tf.div(img,255.0)
 
 	return img, label
 
@@ -113,16 +114,16 @@ def tfrecord_parse_function(example_proto):
 	if config.random_color_contrast==1:
 		img=tf.image.random_contrast(img,lower=config.contrast_range[0],upper=config.contrast_range[1])
 
-
-	img = tf.cast(img, tf.float32)
-	# standardize the image
-	if config.normtype==0:
-		img=tf.img.per_image_standardization(img)
-	elif config.normtype==1:
-		img = tf.subtract(img,127.5)
-		img=tf.div(img,128.0)
-	elif config.normtype==2:
-		img=tf.div(img,255.0)
+	if config.input_test_flag==0:
+		img = tf.cast(img, tf.float32)
+		# standardize the image
+		if config.normtype==0:
+			img=tf.img.per_image_standardization(img)
+		elif config.normtype==1:
+			img = tf.subtract(img,127.5)
+			img=tf.div(img,128.0)
+		elif config.normtype==2:
+			img=tf.div(img,255.0)
 
 	label = tf.cast(features['label'], tf.int64)
 	return img, label
@@ -149,7 +150,7 @@ def tfrecord_input_data(record_path,batch_size):
 
 
 def read_text_test():
-
+	config.input_test_flag=1
 	iterator,next_element=img_input_data("/home/hanson/dataset/test_align_144x144",2)
 	sess = tf.Session()
 
@@ -158,17 +159,17 @@ def read_text_test():
 		while True:
 			try:
 				images, labels = sess.run(next_element)
-				#cv2.imshow('test', images[1, ...])
-				#cv2.waitKey(0)
+				cv2.imshow('test', images[1, ...])
+				cv2.waitKey(0)
 				print labels
-				time.sleep(1)
+
 			except tf.errors.OutOfRangeError:
 				print("End of dataset")
 				break
 
 
 def read_tfrecord_test():
-
+	config.input_test_flag=1
 	iterator,next_element=tfrecord_input_data('tfrecord_dataset/ms1m_train.tfrecords',2)
 	sess = tf.Session()
 
@@ -186,4 +187,4 @@ def read_tfrecord_test():
 
 
 if __name__ == '__main__':
-	read_tfrecord_test()
+	read_text_test()

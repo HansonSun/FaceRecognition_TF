@@ -9,7 +9,7 @@ import random
 import tensorflow as tf
 import numpy as np
 import importlib
-import facenet
+import tools_func
 import tensorflow.contrib.slim as slim
 from tensorflow.python.ops import data_flow_ops
 from tensorflow.python.framework import ops
@@ -40,7 +40,7 @@ def main( ):
     seed=666
     np.random.seed(seed=seed)
     random.seed(seed)
-    train_set = facenet.get_dataset(config.training_dateset)
+    train_set = tools_func.get_dataset(config.training_dateset)
     nrof_classes = len(train_set)
 
     print('Model directory: %s' % model_dir)
@@ -51,7 +51,7 @@ def main( ):
         global_step = tf.Variable(0, trainable=False)
 
         # Get a list of image paths and their labels
-        image_list, label_list = facenet.get_image_paths_and_labels(train_set)
+        image_list, label_list = tools_func.get_image_paths_and_labels(train_set)
         assert len(image_list)>0, 'The dataset should not be empty'
 
         # Create a queue that produces indices into the image_list and label_list
@@ -86,25 +86,25 @@ def main( ):
             for filename in tf.unstack(filenames):
                 file_contents = tf.read_file(filename)
                 image = tf.image.decode_image(file_contents, channels=3)
-                image = tf.py_func(resize_image, [image,config.dateset_img_width,config.dateset_img_height], tf.uint8)
+                image = tf.py_func(resize_image, [image,config.dataset_img_width,config.dataset_img_height], tf.uint8)
 
                 if config.random_rotate:
-                    image = tf.py_func(facenet.random_rotate_image, [image], tf.uint8)
+                    image = tf.py_func(tools_func.random_rotate_image, [image], tf.uint8)
                 if config.random_crop:
-                    image = tf.random_crop(image, [config.input_img_height,config.input_img_width,config.input_img_channel])
+                    image = tf.random_crop(image, [config.input_img_height,config.input_img_width,3])
                 else:
                     image = tf.image.resize_image_with_crop_or_pad(image, config.input_img_height,config.input_img_width)
                 if config.random_flip:
                     image = tf.image.random_flip_left_right(image)
 
                 #pylint: disable=no-member
-                image.set_shape((config.input_img_height,config.input_img_width,config.input_img_channel))
+                image.set_shape((config.input_img_height,config.input_img_width,3))
                 images.append(tf.image.per_image_standardization(image))
             images_and_labels.append([images, label])
 
         image_batch, label_batch = tf.train.batch_join(
             images_and_labels, batch_size=batch_size_placeholder,
-            shapes=[(config.input_img_height,config.input_img_width,config.input_img_channel), ()], enqueue_many=True,
+            shapes=[(config.input_img_height,config.input_img_width,3), ()], enqueue_many=True,
             capacity=4 * nrof_preprocess_threads * config.batch_size,
             allow_smaller_final_batch=True)
         image_batch = tf.identity(image_batch, 'image_batch')
@@ -129,7 +129,7 @@ def main( ):
 
         # Add center loss
         if config.center_loss_lambda>0.0:
-            prelogits_center_loss, _ = facenet.center_loss(prelogits, label_batch, config.center_loss_alpha, nrof_classes)
+            prelogits_center_loss, _ = tools_func.center_loss(prelogits, label_batch, config.center_loss_alpha, nrof_classes)
             tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_center_loss * config.center_loss_lambda)
 
         learning_rate = tf.train.exponential_decay(learning_rate_placeholder, global_step,
@@ -147,7 +147,7 @@ def main( ):
         total_loss = tf.add_n([cross_entropy_mean] + regularization_losses, name='total_loss')
 
         # Build a Graph that trains the model with one batch of examples and updates the model parameters
-        train_op = facenet.train(total_loss, global_step, config.optimizer,
+        train_op = tools_func.train(total_loss, global_step, config.optimizer,
             learning_rate, config.moving_average_decay, tf.global_variables())
 
         # Create a saver
@@ -196,7 +196,7 @@ def train( sess, epoch, image_list, label_list, index_dequeue_op, enqueue_op, im
     if config.learning_rate>0.0:
         lr = config.learning_rate
     else:
-        lr = facenet.get_learning_rate_from_file(learning_rate_schedule_file, epoch)
+        lr = tools_func.get_learning_rate_from_file(learning_rate_schedule_file, epoch)
 
     index_epoch = sess.run(index_dequeue_op)
     label_epoch = np.array(label_list)[index_epoch]

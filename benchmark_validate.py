@@ -9,7 +9,7 @@ from facetools.fr_validate import fr_validate
 import importlib
 from tensorflow.python.framework import graph_util
 import config
-import toolfunc
+import tools_func
 from facetools import faceutils as fu
 import scipy
 
