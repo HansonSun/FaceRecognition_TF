@@ -12,8 +12,8 @@ max_nrof_epochs=1000
 epoch_size=1000
 models_dir="models/"
 logs_dir="logs/"
-train_net="squeezenet"
-embedding_size=128
+train_net="inception_resnet_v2"
+embedding_size=512
 input_test_flag=0
 topn_threshold=99.0
 
@@ -28,10 +28,15 @@ test_youtubeface=0
 youtube_root_path="home/hanson/valid_dataset/YOUTUBE"
 
 ##--------------------hyper parameter---------------------------##
+lr_type_list=['exponential_decay','piecewise_constant']
+lr_type=lr_type_list[1]
 learning_rate=0.01  #if learning_rate is -1,use learning_rate schedule file
 learning_rate_decay_step=1000
 learning_rate_decay_rate=0.96
 learning_rate_schedule_file="lr_schedule/learning_rate_schedule_classifier_casia.txt"
+boundaries = [10000, 100000,500000]
+values = [0.1, 0.01, 0.001,0.0001]
+
 # optimizer func
 optimizer_list=['ADAGRAD','ADADELTA','ADAM','RMSPROP','MOM']
 optimizer=optimizer_list[3]

@@ -34,7 +34,7 @@ def main( ):
     if not os.path.isdir(model_dir):  # Create the model directory if it doesn't exist
         os.makedirs(model_dir)
     topn_model_dir = os.path.join(model_dir,"topn")
-    if not os.path.isdir(topn_model_dir):  # Create the model directory if it doesn't exist
+    if not os.path.isdir(topn_model_dir):  # Create the topn model directory if it doesn't exist
         os.makedirs(topn_model_dir)
 
     seed=666
@@ -128,9 +128,9 @@ def main( ):
         embeddings = tf.nn.l2_normalize(prelogits, 1, 1e-10, name='embeddings')
 
         # Add center loss
-        if config.center_loss_lambda>0.0:
-            prelogits_center_loss, _ = tools_func.center_loss(prelogits, label_batch, config.center_loss_alpha, nrof_classes)
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_center_loss * config.center_loss_lambda)
+        if config.Centerloss_lambda>0.0:
+            prelogits_center_loss, _ = tools_func.center_loss(prelogits, label_batch, config.Centerloss_alpha, nrof_classes)
+            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_center_loss * config.Centerloss_lambda)
 
         learning_rate = tf.train.exponential_decay(learning_rate_placeholder, global_step,
             config.learning_rate_decay_step*config.epoch_size, config.learning_rate_decay_rate, staircase=True)

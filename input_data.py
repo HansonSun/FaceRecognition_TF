@@ -133,7 +133,7 @@ def img_input_data(dataset_path,batch_size):
 	img_paths,labels=img_dataset.paths_and_labels()
 	dataset=tf.data.Dataset.from_tensor_slices((img_paths,labels))
 	dataset = dataset.map(text_parse_function)
-	dataset = dataset.shuffle(buffer_size=100000)
+	dataset = dataset.shuffle(buffer_size=50000)
 	dataset = dataset.batch(batch_size)
 	iterator = dataset.make_initializable_iterator()
 	next_element = iterator.get_next()
@@ -143,7 +143,7 @@ def img_input_data(dataset_path,batch_size):
 def tfrecord_input_data(record_path,batch_size):
 	record_dataset = tf.data.TFRecordDataset(record_path)
 	record_dataset = record_dataset.map(tfrecord_parse_function)
-	record_dataset = record_dataset.shuffle(buffer_size=100000)
+	record_dataset = record_dataset.shuffle(buffer_size=50000)
 	record_dataset = record_dataset.batch(batch_size)
 	iterator = record_dataset.make_initializable_iterator()
 	next_element = iterator.get_next()

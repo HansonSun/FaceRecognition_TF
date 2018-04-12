@@ -30,7 +30,6 @@ def training(total_loss, learning_rate, global_step, update_gradient_vars):
     grads = opt.compute_gradients(total_loss)
     update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
     with tf.control_dependencies(update_ops):
-    # Apply gradients.
         train_op = opt.apply_gradients(grads, global_step=global_step)
     return train_op
 
@@ -97,7 +96,11 @@ def run_training():
 
     #adjust learning rate
     global_step = tf.Variable(0, trainable=False)
-    learning_rate = tf.train.exponential_decay(config.learning_rate,global_step,config.learning_rate_decay_step,config.learning_rate_decay_rate,staircase=True)
+    if config.lr_type=='exponential_decay':
+        learning_rate = tf.train.exponential_decay(config.learning_rate,global_step,config.learning_rate_decay_step,config.learning_rate_decay_rate,staircase=True)
+    elif config.lr_type=='piecewise_constant':
+        learning_rate = tf.train.piecewise_constant(global_step, config.boundaries, config.values)
+
 
     custom_loss=tf.get_collection("losses")
     regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
@@ -118,6 +121,7 @@ def run_training():
                 use_time=0
                 try:
                     images_train, labels_train = sess.run(next_element)
+
                     start_time=time.time()
                     input_dict={phase_train_placeholder:True,images_placeholder:images_train,labels_placeholder:labels_train}
                     step,lr,train_loss,_,pre_labels,real_labels = sess.run([global_step,learning_rate,total_loss,train_op,predict_labels,labels_placeholder],feed_dict=input_dict)

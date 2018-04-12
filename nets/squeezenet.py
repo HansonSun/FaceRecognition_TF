@@ -27,7 +27,14 @@ def expand(inputs, num_outputs):
         e3x3 = slim.conv2d(inputs, num_outputs, [3, 3], scope='3x3')
     return tf.concat([e1x1, e3x3], 3)
 
-def inference(images, keep_probability=0.8, phase_train=True, bottleneck_layer_size=128, weight_decay=0.0, reuse=None):
+def inference(images,
+              keep_probability=0.8,
+              phase_train=True,
+              bottleneck_layer_size=128,
+              weight_decay=0.0,
+              reuse=None,
+              w_init=slim.xavier_initializer_conv2d(uniform=True)
+              ):
     batch_norm_params = {
         # Decay for the moving averages.
         'decay': 0.995,
@@ -39,7 +46,7 @@ def inference(images, keep_probability=0.8, phase_train=True, bottleneck_layer_s
         'variables_collections': [ tf.GraphKeys.TRAINABLE_VARIABLES ],
     }
     with slim.arg_scope([slim.conv2d, slim.fully_connected],
-                        weights_initializer=slim.xavier_initializer_conv2d(uniform=True),
+                        weights_initializer=w_init,
                         weights_regularizer=slim.l2_regularizer(weight_decay),
                         normalizer_fn=slim.batch_norm,
                         normalizer_params=batch_norm_params):
