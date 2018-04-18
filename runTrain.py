@@ -4,7 +4,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import time
 import sys
-sys.path.append("./nets")
+sys.path.append("./custom_nets")
 import random
 import tensorflow as tf
 import numpy as np
@@ -133,7 +133,7 @@ def main( ):
             tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_center_loss * config.Centerloss_lambda)
 
         learning_rate = tf.train.exponential_decay(learning_rate_placeholder, global_step,
-            config.learning_rate_decay_step*config.epoch_size, config.learning_rate_decay_rate, staircase=True)
+            config.learning_rate_decay_epochs*config.epoch_size, config.learning_rate_decay_rate, staircase=True)
         tf.summary.scalar('learning_rate', learning_rate)
 
         # Calculate the average cross entropy loss across the batch
@@ -181,7 +181,7 @@ def main( ):
                 filename = os.path.join(model_dir, "%d.cpkt"%step)
                 saver.save(sess, filename)
                 acc_dict=test_benchmark(model_dir)
-                if acc_dict["lfw_acc"]>99.0:
+                if acc_dict["lfw_acc"]>config.topn_threshold:
                     filename = "%s_%d[lfw=%.1f,cff=%.1f,cfp=%.1f].cpkt"%(topn_model_dir,step,acc_dict["lfw_acc"],acc_dict["cff_acc"],acc_dict["cfp_acc"])
                     saver.save(sess, filename)
 
@@ -218,8 +218,8 @@ def train( sess, epoch, image_list, label_list, index_dequeue_op, enqueue_op, im
         else:
             err, _, step, reg_loss = sess.run([loss, train_op, global_step, regularization_losses], feed_dict=feed_dict)
         duration = time.time() - start_time
-        print('Epoch: [%d][%d/%d]\tTime %.3f\tLoss %2.3f\tRegLoss %2.3f' %
-              (epoch, batch_number+1, config.epoch_size, duration, err, np.sum(reg_loss)))
+        print('Epoch: [%d][%d/%d]\tlr %f\tTime %.3f\tLoss %2.3f\tRegLoss %2.3f' %
+              (epoch, batch_number+1, config.epoch_size, lr,duration, err, np.sum(reg_loss)))
         batch_number += 1
         train_time += duration
     # Add validation loss and accuracy to summary

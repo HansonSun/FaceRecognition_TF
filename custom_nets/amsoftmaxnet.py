@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
 def MFM(net):
-    net_channel=int (net.shape[-1]) 
+    net_channel=int (net.shape[-1])
     #Slice
     slice1,slice2 = tf.split(net,[net_channel/2,net_channel/2],int(net.shape.ndims)-1 )
     #eltwise max
@@ -10,7 +10,13 @@ def MFM(net):
     return eltwise
 
 
-def inference(image):
+def inference(images,
+              keep_probability=0.8,
+              phase_train=True,
+              bottleneck_layer_size=128,
+              weight_decay=0.0,
+              reuse=None,
+              w_init=slim.xavier_initializer_conv2d(uniform=True)):
     with slim.arg_scope([slim.conv2d, slim.fully_connected],
                     weights_initializer=slim.xavier_initializer_conv2d(uniform=True),
                     weights_regularizer=slim.l2_regularizer(0.1),activation_fn=None ):

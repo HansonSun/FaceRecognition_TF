@@ -1,7 +1,7 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import sys
-sys.path.append("./nets")
+sys.path.append("./custom_nets")
 import numpy as np
 import tensorflow as tf
 import input_data

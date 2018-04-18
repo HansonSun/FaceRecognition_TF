@@ -22,7 +22,7 @@ def layer_setup(num_layers):
         filters = [64,128,256,512]
     return units,filters
 
-def inference(images,keep_probability=0.8,phase_train=True,scope="inference",weight_decay=0.0,bottleneck_layer_size=512,num_layers=20,reuse=None):
+def inference(images,keep_probability=0.8,phase_train=True,scope="inference",weight_decay=0.0,bottleneck_layer_size=512,num_layers=36,reuse=None):
     units,filters=layer_setup(num_layers)
     end_poins={}
     body = images

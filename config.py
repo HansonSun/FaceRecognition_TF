@@ -1,7 +1,7 @@
 import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list,if the input dataset is image dataset ,you needn't set the nrof_classes
-training_dateset = "/home/hanson/dataset/VGGFACE2/train_align"
+training_dateset = "/home/hanson/dataset/VGGFACE2/trainvgg/"
 nrof_classes=-1
 batch_size=100
 dataset_img_width=128
@@ -12,14 +12,14 @@ max_nrof_epochs=1000
 epoch_size=1000
 models_dir="models/"
 logs_dir="logs/"
-train_net="inception_resnet_v2"
-embedding_size=512
+train_net="inception_resnet_v1"
+embedding_size=128
 input_test_flag=0
-topn_threshold=99.0
+topn_threshold=98.0
 
 ##--------------benchmark test----------------------------------##
 test_lfw=1
-lfw_root_path="/home/hanson/valid_dataset/LFW/lfw_align_112x112"
+lfw_root_path="/home/hanson/valid_dataset/LFW/lfw-insightface"
 test_agedb=0
 agedb_root_path="/home/hanson/valid_dataset/AGEDB"
 test_cfp=0
@@ -30,7 +30,8 @@ youtube_root_path="home/hanson/valid_dataset/YOUTUBE"
 ##--------------------hyper parameter---------------------------##
 lr_type_list=['exponential_decay','piecewise_constant']
 lr_type=lr_type_list[1]
-learning_rate=0.01  #if learning_rate is -1,use learning_rate schedule file
+learning_rate=-1  #if learning_rate is -1,use learning_rate schedule file
+learning_rate_decay_epochs=100
 learning_rate_decay_step=1000
 learning_rate_decay_rate=0.96
 learning_rate_schedule_file="lr_schedule/learning_rate_schedule_classifier_casia.txt"
@@ -79,7 +80,7 @@ loss_type=5
 
 #Centerloss param
 Centerloss_lambda=1e-2
-Centerloss_alpha=0.9
+Centerloss_alpha=0.6
 #AdditiveAngularMargin param
 AdditiveAngularMargin_s=64.0
 AdditiveAngularMargin_m=0.5
