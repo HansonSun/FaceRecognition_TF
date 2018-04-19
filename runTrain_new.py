@@ -46,6 +46,8 @@ def run_training():
     topn_models_dir = os.path.join(models_dir,"topn")#topn dir used for save top accuracy model
     if not os.path.isdir(topn_models_dir):  # Create the topn model directory if it doesn't exist
         os.makedirs(topn_models_dir)
+    topn_file=open(os.path.join(topn_models_dir,"topn_acc.txt"),"a+")
+    topn_file.close()
     print('Model directory: %s' % config.models_dir)
     print('Log directory: %s' % config.logs_dir)
 
@@ -136,11 +138,14 @@ def run_training():
                     if (step%config.save_iter==0):
                         filename = os.path.join(models_dir, "%d.cpkt"%step)
                         saver.save(sess, filename)
-                        acc_dict=test_benchmark(models_dir)
-                        if acc_dict["lfw_acc"]>99.0:
-                            filename = "%s_%d[lfw=%.1f,cff=%.1f,cfp=%.1f].cpkt"%(topn_models_dir,step,acc_dict["lfw_acc"],acc_dict["cff_acc"],acc_dict["cfp_acc"])
-                            saver.save(sess, filename)
-
+                        if config.test_lfw==1 :
+                            acc_dict=test_benchmark(os.path.join(models_dir))
+                            if acc_dict["lfw_acc"]>config.topn_threshold:
+                                topn_file=open(os.path.join(topn_models_dir,"topn_acc.txt"),"a+")
+                                filename = os.path.join(topn_models_dir, "%d.cpkt"%step)
+                                topn_file.write("%s %s\n"%(filename,str(acc_dict)) )
+                                saver.save(sess, filename)
+                                topn_file.close()
 
                 except tf.errors.OutOfRangeError:
                     print("End of epoch ")

@@ -2,15 +2,13 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import sys
 sys.path.append("./nets")
+sys.path.append("./facetools")
 import tensorflow as tf
 import numpy as np
 import cv2
-from facetools.fr_validate import fr_validate
-import importlib
-from tensorflow.python.framework import graph_util
+from fr_validate import  fr_validate
 import config
-import tools_func
-from facetools import faceutils as fu
+import faceutils as fu
 import scipy
 
 class benchmark_validate():
@@ -68,7 +66,7 @@ class benchmark_validate():
 
 def test_benchmark(model_dir):
     demo=benchmark_validate(model_dir)
-    benchmark=fr_validate(test_lfw=1,test_cfp=1)
+    benchmark=fr_validate(test_lfw=config.test_lfw,lfwpath=config.lfw_root_path,test_cfp=config.test_cfp,cfppath=config.cfp_root_path)
     return benchmark.top_accurate(demo)
 
 

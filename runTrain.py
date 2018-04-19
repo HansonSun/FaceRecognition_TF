@@ -1,10 +1,9 @@
 from datetime import datetime
-import os.path
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import time
 import sys
-sys.path.append("./custom_nets")
+sys.path.append("custom_nets")
 import random
 import tensorflow as tf
 import numpy as np
@@ -30,12 +29,12 @@ def main( ):
     log_dir = os.path.join(os.path.expanduser(config.logs_dir), subdir)
     if not os.path.isdir(log_dir):  # Create the log directory if it doesn't exist
         os.makedirs(log_dir)
-    model_dir = os.path.join(os.path.expanduser(config.models_dir), subdir)
-    if not os.path.isdir(model_dir):  # Create the model directory if it doesn't exist
-        os.makedirs(model_dir)
-    topn_model_dir = os.path.join(model_dir,"topn")
-    if not os.path.isdir(topn_model_dir):  # Create the topn model directory if it doesn't exist
-        os.makedirs(topn_model_dir)
+    models_dir = os.path.join(os.path.expanduser(config.models_dir), subdir)
+    if not os.path.isdir(models_dir):  # Create the model directory if it doesn't exist
+        os.makedirs(models_dir)
+    topn_models_dir = os.path.join(models_dir,"topn")
+    if not os.path.isdir(topn_models_dir):  # Create the topn model directory if it doesn't exist
+        os.makedirs(topn_models_dir)
 
     seed=666
     np.random.seed(seed=seed)
@@ -43,7 +42,7 @@ def main( ):
     train_set = tools_func.get_dataset(config.training_dateset)
     nrof_classes = len(train_set)
 
-    print('Model directory: %s' % model_dir)
+    print('Model directory: %s' % models_dir)
     print('Log directory: %s' % log_dir)
 
     with tf.Graph().as_default():
@@ -178,14 +177,17 @@ def main( ):
                     learning_rate_placeholder, phase_train_placeholder, batch_size_placeholder, global_step,
                     total_loss, train_op, summary_op, summary_writer, regularization_losses, config.learning_rate_schedule_file)
 
-                filename = os.path.join(model_dir, "%d.cpkt"%step)
+                filename = os.path.join(models_dir, "%d.cpkt"%step)
                 saver.save(sess, filename)
-                acc_dict=test_benchmark(model_dir)
-                if acc_dict["lfw_acc"]>config.topn_threshold:
-                    filename = "%s_%d[lfw=%.1f,cff=%.1f,cfp=%.1f].cpkt"%(topn_model_dir,step,acc_dict["lfw_acc"],acc_dict["cff_acc"],acc_dict["cfp_acc"])
-                    saver.save(sess, filename)
-
-    return model_dir
+                if config.test_lfw==1 :
+                    acc_dict=test_benchmark(os.path.join(models_dir))
+                    if acc_dict["lfw_acc"]>config.topn_threshold:
+                        topn_file=open(os.path.join(topn_models_dir,"topn_acc.txt"),"a+")
+                        filename = os.path.join(topn_models_dir, "%d.cpkt"%step)
+                        topn_file.write("%s %s\n"%(filename,str(acc_dict)) )
+                        saver.save(sess, filename)
+                        topn_file.close()
+    return models_dir
 
 
 def train( sess, epoch, image_list, label_list, index_dequeue_op, enqueue_op, image_paths_placeholder, labels_placeholder,

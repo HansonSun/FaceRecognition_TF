@@ -131,7 +131,7 @@ def tfrecord_parse_function(example_proto):
 def img_input_data(dataset_path,batch_size):
 	img_dataset=ImageDatasetReader([dataset_path])
 	img_paths,labels=img_dataset.paths_and_labels()
-	dataset=tf.data.Dataset.from_tensor_slices((img_paths,labels))
+	dataset=tf.contrib.data.Dataset.from_tensor_slices((img_paths,labels))
 	dataset = dataset.map(text_parse_function)
 	dataset = dataset.shuffle(buffer_size=50000)
 	dataset = dataset.batch(batch_size)
