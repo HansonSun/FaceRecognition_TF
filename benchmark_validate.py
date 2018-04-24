@@ -48,7 +48,7 @@ class benchmark_validate():
         img_w=config.input_img_width
         img_h=config.input_img_height
 
-        images = np.zeros((2, img_w, img_h, 3))
+        images = np.zeros((2, img_h,img_w, 3))
         for index,i in enumerate([path_l,path_r]):
             img=cv2.imread(i)
             img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)

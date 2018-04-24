@@ -2,7 +2,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import sys
 sys.path.append("./nets")
-sys.path.append("./facetools")
+sys.path.append("/home/hanson/work/facetools_install/facetools")
 import tensorflow as tf
 import numpy as np
 import cv2
@@ -65,11 +65,11 @@ class pb_validation():
 
 def main(argv):
     parser=argparse.ArgumentParser()
-    parser.add_argument("-ih","--img_height",type=int,help='input image height',default=112)
-    parser.add_argument("-iw","--img_weight",type=int,help='input image weight',default=112)
-    parser.add_argument("-pb","--pb_file",type=str,help='pd file',default="first.pb")
+    parser.add_argument("-ih","--img_height",type=int,help='input image height',default=160)
+    parser.add_argument("-iw","--img_weight",type=int,help='input image weight',default=160)
+    parser.add_argument("-pb","--pb_file",type=str,help='pd file',default="faceidentify_160x160.pb")
     parser.add_argument("--preprocess_type",type=int,help='preprocess type',default=0)
-    parser.add_argument("--lfwpath",type=str,help='lfw path',default="/home/hanson/valid_dataset/LFW/lfw_align_112x112")
+    parser.add_argument("--lfwpath",type=str,help='lfw path',default="/home/hanson/valid_dataset/LFW/lfw_align")
     parser.add_argument("--cfppath",type=str,help='cfp path',default="/home/hanson/valid_dataset/CFP/Images_112x112")
     args=parser.parse_args(argv)
     demo=pb_validation(img_w=args.img_weight,

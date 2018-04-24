@@ -50,7 +50,7 @@ def inference(images,
                         weights_regularizer=slim.l2_regularizer(weight_decay),
                         normalizer_fn=slim.batch_norm,
                         normalizer_params=batch_norm_params):
-        with tf.variable_scope('squeezenet', [images], reuse=reuse):
+        with tf.variable_scope('inference', [images], reuse=reuse):
             with slim.arg_scope([slim.batch_norm, slim.dropout],
                                 is_training=phase_train):
                 net = slim.conv2d(images, 96, [7, 7], stride=2, scope='conv1')

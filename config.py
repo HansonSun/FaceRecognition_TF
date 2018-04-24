@@ -1,25 +1,26 @@
 import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list,if the input dataset is image dataset ,you needn't set the nrof_classes
-training_dateset = "/home/hanson/dataset/VGGFACE2/trainvgg/"
+training_dateset = "/home/hanson/dataset/VGGFACE2/train_align"
+dataset_img_width=182
+dataset_img_height=182
+
 nrof_classes=-1
 batch_size=100
-dataset_img_width=128
-dataset_img_height=128
 display_iter=10
-save_iter=1000
+save_iter=10
 max_nrof_epochs=1000
 epoch_size=1000
-models_dir="models/"
+models_dir="saved_models/"
 logs_dir="logs/"
 train_net="inception_resnet_v1"
 embedding_size=128
 input_test_flag=0
-topn_threshold=98.0
+topn_threshold=50
 
 ##--------------benchmark test----------------------------------##
-test_lfw=1
-lfw_root_path="/home/hanson/valid_dataset/LFW/lfw-insightface"
+test_lfw=1  #topn save must set lfw test flage to 1
+lfw_root_path="/home/hanson/valid_dataset/LFW/lfw_align"
 test_agedb=0
 agedb_root_path="/home/hanson/valid_dataset/AGEDB"
 test_cfp=0
@@ -28,7 +29,7 @@ test_youtubeface=0
 youtube_root_path="home/hanson/valid_dataset/YOUTUBE"
 
 ##--------------------hyper parameter---------------------------##
-lr_type_list=['exponential_decay','piecewise_constant']
+lr_type_list=['exponential_decay','piecewise_constant','manual_modify']
 lr_type=lr_type_list[1]
 learning_rate=-1  #if learning_rate is -1,use learning_rate schedule file
 learning_rate_decay_epochs=100
@@ -50,8 +51,8 @@ nrof_preprocess_threads=4
 ##---------------------Data Augment-----------------------------##
 #open random crop,crop image size must less than dataset image size
 random_crop=1
-crop_img_width=112
-crop_img_height=112
+crop_img_width=160
+crop_img_height=160
 input_img_width=crop_img_width if random_crop else dataset_img_width
 input_img_height=crop_img_height if random_crop else dataset_img_height
 #random rotate
@@ -76,7 +77,7 @@ process_type=0
 
 ##-----------------------center loss------------------------------##
 loss_type_list=['softmax','Centerloss','AdditiveAngularMargin','AdditiveMargin','AngularMargin','LargeMarginCosine']
-loss_type=5
+loss_type=1
 
 #Centerloss param
 Centerloss_lambda=1e-2

@@ -183,9 +183,10 @@ def main( ):
                     acc_dict=test_benchmark(os.path.join(models_dir))
                     if acc_dict["lfw_acc"]>config.topn_threshold:
                         topn_file=open(os.path.join(topn_models_dir,"topn_acc.txt"),"a+")
-                        filename = os.path.join(topn_models_dir, "%d.cpkt"%step)
-                        topn_file.write("%s %s\n"%(filename,str(acc_dict)) )
-                        saver.save(sess, filename)
+                        topn_file.write("%s %s\n"%(os.path.join(topn_models_dir, "%d.ckpt"%step),str(acc_dict)) )
+                        shutil.copyfile(os.path.join(models_dir, "%d.ckpt.meta"%step),os.path.join(topn_models_dir, "%d.ckpt.meta"%step))
+                        shutil.copyfile(os.path.join(models_dir, "%d.ckpt.index"%step),os.path.join(topn_models_dir, "%d.ckpt.index"%step))
+                        shutil.copyfile(os.path.join(models_dir, "%d.ckpt.data-00000-of-00001"%step),os.path.join(topn_models_dir, "%d.ckpt.data-00000-of-00001"%step))
                         topn_file.close()
     return models_dir
 

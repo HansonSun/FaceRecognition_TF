@@ -12,6 +12,7 @@ import tensorflow.contrib.slim as slim
 import time
 from datetime import datetime
 from benchmark_validate import *
+import shutil
 
 def training(total_loss, learning_rate, global_step, update_gradient_vars):
     if config.optimizer=='ADAGRAD':
@@ -74,14 +75,14 @@ def run_training():
         logits = slim.fully_connected(prelogits,config.nrof_classes,
             activation_fn=None,weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
             weights_regularizer=slim.l2_regularizer(5e-5),
-            scope='Logits_end',reuse=False)
+            scope='Logits',reuse=False)
         softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels_placeholder),name="loss")
         tf.add_to_collection('losses', softmaxloss)
     elif config.loss_type==1: #center loss
         lossfunc=importlib.import_module(config.loss_type_list[config.loss_type])
         logits = slim.fully_connected(prelogits,config.nrof_classes,activation_fn=None,
             weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
-            weights_regularizer=slim.l2_regularizer(5e-5),scope='Logits_end',reuse=False)
+            weights_regularizer=slim.l2_regularizer(5e-5),scope='Logits',reuse=False)
         #softmax loss
         softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels_placeholder),name="loss")
         tf.add_to_collection('losses', softmaxloss)
@@ -111,7 +112,7 @@ def run_training():
 
     #optimize loss and update
     train_op = training(total_loss,learning_rate,global_step,tf.global_variables())
-    saver=tf.train.Saver(tf.trainable_variables(),max_to_keep=10)
+    saver=tf.train.Saver(tf.trainable_variables(),max_to_keep=3)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -136,15 +137,17 @@ def run_training():
                         print "step:%d lr:%f time:%.3f total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch)
                         use_time=0
                     if (step%config.save_iter==0):
-                        filename = os.path.join(models_dir, "%d.cpkt"%step)
-                        saver.save(sess, filename)
+                        filename_cpkt = os.path.join(models_dir, "%d.ckpt"%step)
+                        saver.save(sess, filename_cpkt)
+
                         if config.test_lfw==1 :
                             acc_dict=test_benchmark(os.path.join(models_dir))
                             if acc_dict["lfw_acc"]>config.topn_threshold:
                                 topn_file=open(os.path.join(topn_models_dir,"topn_acc.txt"),"a+")
-                                filename = os.path.join(topn_models_dir, "%d.cpkt"%step)
-                                topn_file.write("%s %s\n"%(filename,str(acc_dict)) )
-                                saver.save(sess, filename)
+                                topn_file.write("%s %s\n"%(os.path.join(topn_models_dir, "%d.ckpt"%step),str(acc_dict)) )
+                                shutil.copyfile(os.path.join(models_dir, "%d.ckpt.meta"%step),os.path.join(topn_models_dir, "%d.ckpt.meta"%step))
+                                shutil.copyfile(os.path.join(models_dir, "%d.ckpt.index"%step),os.path.join(topn_models_dir, "%d.ckpt.index"%step))
+                                shutil.copyfile(os.path.join(models_dir, "%d.ckpt.data-00000-of-00001"%step),os.path.join(topn_models_dir, "%d.ckpt.data-00000-of-00001"%step))
                                 topn_file.close()
 
                 except tf.errors.OutOfRangeError:
