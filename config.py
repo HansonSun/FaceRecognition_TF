@@ -16,7 +16,7 @@ logs_dir="logs/"
 train_net="inception_resnet_v1"
 embedding_size=128
 input_test_flag=0
-topn_threshold=50
+topn_threshold=98
 
 ##--------------benchmark test----------------------------------##
 test_lfw=1  #topn save must set lfw test flage to 1

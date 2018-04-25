@@ -16,6 +16,7 @@ from tensorflow.python.ops import array_ops
 import cv2
 import config
 from benchmark_validate import *
+import shutil
 
 def resize_image(image,resize_w,resize_h):
     image=cv2.resize(image,(resize_w,resize_h))
