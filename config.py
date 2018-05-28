@@ -1,43 +1,55 @@
 import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list,if the input dataset is image dataset ,you needn't set the nrof_classes
-training_dateset = "/home/hanson/dataset/VGGFACE2/train_align"
-dataset_img_width=182
-dataset_img_height=182
+training_dateset_path = "/home/hanson/dataset/VGGFACE2/train_align_182"
+dataset_img_width=250
+dataset_img_height=250
 
-nrof_classes=-1
+nrof_classes=-1  #the code can auto infernce from dataset path
 batch_size=100
 display_iter=10
-save_iter=10
+save_iter=20
 max_nrof_epochs=1000
 epoch_size=1000
 models_dir="saved_models/"
 logs_dir="logs/"
-train_net="inception_resnet_v1"
+model_def="inception_resnet_v1"
 embedding_size=128
 input_test_flag=0
-topn_threshold=98
+topn_threshold=95
+distance_metric=0 #0:euclidean distance 1: cosine distance
+feature_flip=0  #when set feature filp to 1 ,it will get twice size of feature
 
 ##--------------benchmark test----------------------------------##
 test_lfw=1  #topn save must set lfw test flage to 1
-lfw_root_path="/home/hanson/valid_dataset/LFW/lfw_align"
+lfw_dateset_path="/home/hanson/valid_dataset/LFW/lfw_align"
 test_agedb=0
-agedb_root_path="/home/hanson/valid_dataset/AGEDB"
-test_cfp=0
-cfp_root_path="/home/hanson/valid_dataset/CFP/Images_112x112"
-test_youtubeface=0
-youtube_root_path="home/hanson/valid_dataset/YOUTUBE"
+agedb_dateset_path="/home/hanson/valid_dataset/AGEDB"
+test_cfp=1
+cfp_dateset_path="/home/hanson/valid_dataset/CFP/Images_112x112"
+test_ytf=0
+youtube_dateset_path="/home/hanson/valid_dataset/YTF/youtube/frame_images_DB"
+test_sllfw=0
+sllfw_dateset_path="home/hanson/valid_dataset/YOUTUBE"
+test_calfw=0
+calfw_dateset_path="/home/hanson/valid_dataset/CALFW"
+test_cplfw=0
+cplfw_dateset_path="/home/hanson/valid_dataset/CPLFW"
 
 ##--------------------hyper parameter---------------------------##
 lr_type_list=['exponential_decay','piecewise_constant','manual_modify']
 lr_type=lr_type_list[1]
 learning_rate=-1  #if learning_rate is -1,use learning_rate schedule file
+#expontial decay
 learning_rate_decay_epochs=100
-learning_rate_decay_step=1000
+learning_rate_decay_step=10
 learning_rate_decay_rate=0.96
-learning_rate_schedule_file="lr_schedule/learning_rate_schedule_classifier_casia.txt"
-boundaries = [10000, 100000,500000]
-values = [0.1, 0.01, 0.001,0.0001]
+#piecewise constant
+learning_rate_schedule_file="lr_schedule/learning_rate_schedule.txt"
+boundaries = [10000, 100000,500000] #the num means iters
+values = [0.1, 0.01, 0.001,0.0001]  #the number means learning rate
+#manual_modify
+modify_step=100
 
 # optimizer func
 optimizer_list=['ADAGRAD','ADADELTA','ADAM','RMSPROP','MOM']
@@ -51,8 +63,8 @@ nrof_preprocess_threads=4
 ##---------------------Data Augment-----------------------------##
 #open random crop,crop image size must less than dataset image size
 random_crop=1
-crop_img_width=160
-crop_img_height=160
+crop_img_width=200
+crop_img_height=200
 input_img_width=crop_img_width if random_crop else dataset_img_width
 input_img_height=crop_img_height if random_crop else dataset_img_height
 #random rotate
@@ -75,9 +87,9 @@ saturaton_range=[0.5,1.5]
 #image preprocess type
 process_type=0
 
-##-----------------------center loss------------------------------##
+##-----------------------loss function paramter------------------------------##
 loss_type_list=['softmax','Centerloss','AdditiveAngularMargin','AdditiveMargin','AngularMargin','LargeMarginCosine']
-loss_type=1
+loss_type=0
 
 #Centerloss param
 Centerloss_lambda=1e-2

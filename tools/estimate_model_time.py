@@ -4,7 +4,7 @@ import importlib
 import tensorflow as tf
 import cv2
 import sys
-sys.path.append("../nets")
+sys.path.append("../custom_nets")
 sys.path.append("../")
 import numpy as np
 import time

@@ -68,7 +68,10 @@ def inference(images,
                 net = slim.dropout(net, keep_probability)
                 net = slim.conv2d(net, 1000, [1, 1], activation_fn=None, normalizer_fn=None, scope='conv10')
                 net = slim.avg_pool2d(net, net.get_shape()[1:3], scope='avgpool10')
-                net = tf.squeeze(net, [1, 2], name='logits')
+                print (net.shape)
+                #net = tf.squeeze(net, [1, 2], name='logits')
+                #print (net.shape)
+                net=tf.reshape(net,(net.shape[0],(net.shape[1]*net.shape[2]*net.shape[3]) ) )
                 net = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None,
                         scope='Bottleneck', reuse=False)
     return net, None

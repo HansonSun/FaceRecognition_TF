@@ -5,7 +5,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 import importlib
 import tensorflow.contrib.slim as slim
 import sys
-sys.path.append("nets")
+sys.path.append("custom_nets")
 sys.path.append("lossfunc")
 import numpy as np
 import tools_func
@@ -15,7 +15,7 @@ import config
 mnist = input_data.read_data_sets('classification_dataset/MNIST/', one_hot=False)
 # Variables
 nrof_classes=10
-batch_size = 200
+batch_size = 20
 total_steps = 10000
 bottleneck_layer_size=128
 draw_feature_flag=0

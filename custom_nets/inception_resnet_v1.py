@@ -195,15 +195,18 @@ def inception_resnet_v1(inputs, is_training=True,
                 with tf.variable_scope('PreLogits'):
                     end_points['PrePool'] = net
                     #pylint: disable=no-member
-                    net = slim.avg_pool2d(net, net.get_shape()[1:3], padding='VALID',
-                                          scope='AvgPool_1a_8x8')
-                    net = slim.flatten(net)
+                    net = slim.avg_pool2d(net, net.get_shape()[1:3], padding='VALID',scope='AvgPool_1a_8x8')
 
-                    net = slim.dropout(net, dropout_keep_prob, is_training=is_training,
-                                       scope='Dropout')
+                    #print (net_t.shape)
+                    #net = slim.flatten(net)
 
-                    end_points['PreLogitsFlatten'] = net
+                    net = slim.dropout(net, dropout_keep_prob, is_training=is_training,scope='Dropout')
 
-                net = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None,
-                        scope='Bottleneck', reuse=False)
+                    #end_points['PreLogitsFlatten'] = net
+
+                net=slim.conv2d(net,128,1)
+                print (net.get_shape())
+                net = tf.squeeze(net, [1, 2], name='aalogits')
+                #net=net.reshape(net,)
+                #net = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None,scope='Bottleneck', reuse=False)
     return net, end_points
