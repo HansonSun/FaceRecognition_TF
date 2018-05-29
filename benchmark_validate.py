@@ -3,14 +3,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import sys
 sys.path.append("./nets")
 sys.path.append("/home/hanson/work/facetools_install/facetools/fr_method/tensorflow")
+sys.path.append("/home/hanson/work/facetools_install/facetools")
 import tensorflow as tf
 import numpy as np
 import cv2
-from fr_validate import  fr_validate
+from fr_benchmark_test import  fr_benchmark_test
 import config
 import faceutils as fu
 import scipy
-
+from facerecognize_base import facerecognize_base
 
 class benchmark_validate(facerecognize_base):
     def __init__(self,model_dir):
@@ -32,7 +33,10 @@ class benchmark_validate(facerecognize_base):
 
 def test_benchmark(model_dir):
     demo=benchmark_validate(model_dir)
-    benchmark=fr_validate(test_lfw=config.test_lfw,lfwpath=config.lfw_root_path,test_cfp=config.test_cfp,cfppath=config.cfp_root_path)
+    benchmark=fr_benchmark_test(test_lfw=config.test_lfw,
+                                lfw_path=config.lfw_dateset_path,
+                                test_cfp=config.test_cfp,
+                                cfp_path=config.cfp_dateset_path)
     return benchmark.top_accurate(demo)
 
 

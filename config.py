@@ -2,19 +2,17 @@ import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list,if the input dataset is image dataset ,you needn't set the nrof_classes
 training_dateset_path = "/home/hanson/dataset/VGGFACE2/train_align_182"
-dataset_img_width=250
-dataset_img_height=250
+dataset_img_width=128
+dataset_img_height=128
 
 nrof_classes=-1  #the code can auto infernce from dataset path
 batch_size=100
 display_iter=10
-save_iter=20
+save_iter=1000
 max_nrof_epochs=1000
-epoch_size=1000
 models_dir="saved_models/"
-logs_dir="logs/"
 model_def="inception_resnet_v1"
-embedding_size=128
+embedding_size=512
 input_test_flag=0
 topn_threshold=95
 distance_metric=0 #0:euclidean distance 1: cosine distance
@@ -22,30 +20,29 @@ feature_flip=0  #when set feature filp to 1 ,it will get twice size of feature
 
 ##--------------benchmark test----------------------------------##
 test_lfw=1  #topn save must set lfw test flage to 1
-lfw_dateset_path="/home/hanson/valid_dataset/LFW/lfw_align"
+lfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/LFW/lfw_facenet_112x112"
 test_agedb=0
-agedb_dateset_path="/home/hanson/valid_dataset/AGEDB"
-test_cfp=1
-cfp_dateset_path="/home/hanson/valid_dataset/CFP/Images_112x112"
+agedb_dateset_path="/home/hanson/valid_dataset/FaceRecognize/AGEDB"
+test_cfp=0
+cfp_dateset_path="/home/hanson/valid_dataset/FaceRecognize/CFP/Images_112x112"
 test_ytf=0
-youtube_dateset_path="/home/hanson/valid_dataset/YTF/youtube/frame_images_DB"
+youtube_dateset_path="/home/hanson/valid_dataset/FaceRecognize/YTF/youtube/frame_images_DB"
 test_sllfw=0
-sllfw_dateset_path="home/hanson/valid_dataset/YOUTUBE"
+sllfw_dateset_path="home/hanson/valid_dataset/FaceRecognize/sllfw"
 test_calfw=0
-calfw_dateset_path="/home/hanson/valid_dataset/CALFW"
+calfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/CALFW"
 test_cplfw=0
-cplfw_dateset_path="/home/hanson/valid_dataset/CPLFW"
+cplfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/CPLFW"
 
 ##--------------------hyper parameter---------------------------##
 lr_type_list=['exponential_decay','piecewise_constant','manual_modify']
-lr_type=lr_type_list[1]
-learning_rate=-1  #if learning_rate is -1,use learning_rate schedule file
+lr_type=lr_type_list[0]
+learning_rate=0.1  #if learning_rate is -1,use learning_rate schedule file
 #expontial decay
 learning_rate_decay_epochs=100
 learning_rate_decay_step=10
 learning_rate_decay_rate=0.96
 #piecewise constant
-learning_rate_schedule_file="lr_schedule/learning_rate_schedule.txt"
 boundaries = [10000, 100000,500000] #the num means iters
 values = [0.1, 0.01, 0.001,0.0001]  #the number means learning rate
 #manual_modify
@@ -54,17 +51,15 @@ modify_step=100
 # optimizer func
 optimizer_list=['ADAGRAD','ADADELTA','ADAM','RMSPROP','MOM']
 optimizer=optimizer_list[3]
-keep_probability=0.8
 moving_average_decay=0.9999
 weight_decay=5e-5
 gpu_memory_fraction=1
-nrof_preprocess_threads=4
 
 ##---------------------Data Augment-----------------------------##
 #open random crop,crop image size must less than dataset image size
 random_crop=1
-crop_img_width=200
-crop_img_height=200
+crop_img_width=128
+crop_img_height=128
 input_img_width=crop_img_width if random_crop else dataset_img_width
 input_img_height=crop_img_height if random_crop else dataset_img_height
 #random rotate
@@ -89,7 +84,7 @@ process_type=0
 
 ##-----------------------loss function paramter------------------------------##
 loss_type_list=['softmax','Centerloss','AdditiveAngularMargin','AdditiveMargin','AngularMargin','LargeMarginCosine']
-loss_type=0
+loss_type=1
 
 #Centerloss param
 Centerloss_lambda=1e-2
