@@ -6,18 +6,18 @@ dataset_img_width=128
 dataset_img_height=128
 
 nrof_classes=-1  #the code can auto infernce from dataset path
-batch_size=100
+batch_size=512
 display_iter=10
-save_iter=1000
+test_save_iter=1000
 max_nrof_epochs=1000
 models_dir="saved_models/"
 model_def="inception_resnet_v1"
-embedding_size=512
-input_test_flag=0
-topn_threshold=95
-distance_metric=0 #0:euclidean distance 1: cosine distance
-feature_flip=0  #when set feature filp to 1 ,it will get twice size of feature
-
+embedding_size=512 #feature output size
+input_test_flag=0  #used to test input data
+topn_threshold=98
+distance_metric=0  #0:euclidean distance 1: cosine distance
+feature_flip=0     #when set feature filp to 1 ,it will get twice size of feature
+feature_normlize=0
 ##--------------benchmark test----------------------------------##
 test_lfw=1  #topn save must set lfw test flage to 1
 lfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/LFW/lfw_facenet_112x112"
@@ -39,9 +39,8 @@ lr_type_list=['exponential_decay','piecewise_constant','manual_modify']
 lr_type=lr_type_list[0]
 learning_rate=0.1  #if learning_rate is -1,use learning_rate schedule file
 #expontial decay
-learning_rate_decay_epochs=100
-learning_rate_decay_step=10
-learning_rate_decay_rate=0.96
+learning_rate_decay_step=1000
+learning_rate_decay_rate=0.98
 #piecewise constant
 boundaries = [10000, 100000,500000] #the num means iters
 values = [0.1, 0.01, 0.001,0.0001]  #the number means learning rate
@@ -50,7 +49,7 @@ modify_step=100
 
 # optimizer func
 optimizer_list=['ADAGRAD','ADADELTA','ADAM','RMSPROP','MOM']
-optimizer=optimizer_list[3]
+optimizer=optimizer_list[2]
 moving_average_decay=0.9999
 weight_decay=5e-5
 gpu_memory_fraction=1
@@ -58,10 +57,10 @@ gpu_memory_fraction=1
 ##---------------------Data Augment-----------------------------##
 #open random crop,crop image size must less than dataset image size
 random_crop=1
-crop_img_width=128
-crop_img_height=128
-input_img_width=crop_img_width if random_crop else dataset_img_width
-input_img_height=crop_img_height if random_crop else dataset_img_height
+crop_img_width=112
+crop_img_height=112
+input_img_width  = crop_img_width  if random_crop else dataset_img_width
+input_img_height = crop_img_height if random_crop else dataset_img_height
 #random rotate
 random_rotate=0
 rotate_angle_range=[-90,90]
@@ -80,7 +79,7 @@ contrast_range=[0.5,1.5]
 random_color_saturation=0
 saturaton_range=[0.5,1.5]
 #image preprocess type
-process_type=0
+img_preprocess_type=1
 
 ##-----------------------loss function paramter------------------------------##
 loss_type_list=['softmax','Centerloss','AdditiveAngularMargin','AdditiveMargin','AngularMargin','LargeMarginCosine']

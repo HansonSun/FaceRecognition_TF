@@ -120,9 +120,9 @@ def tfrecord_parse_function(example_proto):
 			img=tf.image.per_image_standardization(img)
 		elif config.normtype==1:
 			img = tf.subtract(img,127.5)
-			img=tf.div(img,128.0)
+			img = tf.div(img,128.0)
 		elif config.normtype==2:
-			img=tf.div(img,255.0)
+			img = tf.div(img,255.0)
 
 	label = tf.cast(features['label'], tf.int64)
 	return img, label
@@ -132,7 +132,7 @@ def img_input_data(dataset_path,batch_size):
 	img_paths,labels=img_dataset.paths_and_labels()
 	dataset=tf.data.Dataset.from_tensor_slices((img_paths,labels))
 	dataset = dataset.map(text_parse_function)
-	dataset = dataset.shuffle(buffer_size=50000)
+	dataset = dataset.shuffle(buffer_size=10000)
 	dataset = dataset.batch(batch_size)
 	iterator = dataset.make_initializable_iterator()
 	next_element = iterator.get_next()

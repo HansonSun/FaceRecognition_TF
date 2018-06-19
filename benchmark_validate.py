@@ -14,7 +14,14 @@ import scipy
 from facerecognize_base import facerecognize_base
 
 class benchmark_validate(facerecognize_base):
-    def __init__(self,model_dir):
+    def __init__(self,
+                model_dir,
+                input_img_width=112,
+                input_img_height=112,
+                feature_normlize=0,
+                img_preprocess_type=1,
+                feature_flip=0,
+                distance_metric=0):
         with tf.Graph().as_default():
             self.sess=tf.Session()
             model_dir_exp = os.path.expanduser(model_dir)
@@ -31,8 +38,25 @@ class benchmark_validate(facerecognize_base):
             self.embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
             self.phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
 
+            self.input_img_width=input_img_width
+            self.input_img_height=input_img_height
+            self.feature_normlize=feature_normlize
+            self.img_preprocess_type=img_preprocess_type
+            self.feature_flip=feature_flip
+            self.distance_metric=distance_metric
+
+
+
+
 def test_benchmark(model_dir):
-    demo=benchmark_validate(model_dir)
+    demo=benchmark_validate(model_dir,
+                input_img_width=config.input_img_width,
+                input_img_height=config.input_img_height,
+                feature_normlize=config.feature_normlize,
+                img_preprocess_type=config.img_preprocess_type,
+                feature_flip=config.feature_flip,
+                distance_metric=config.distance_metric)
+
     benchmark=fr_benchmark_test(test_lfw=config.test_lfw,
                                 lfw_path=config.lfw_dateset_path,
                                 test_cfp=config.test_cfp,
@@ -41,4 +65,4 @@ def test_benchmark(model_dir):
 
 
 if __name__ == "__main__":
-    test_benchmark("/home/hanson/work/Facerecognize_TF/models/20180327-100239")
+    test_benchmark("/home/hanson/work/Facerecognize_TF/saved_models/20180601-151237/models")

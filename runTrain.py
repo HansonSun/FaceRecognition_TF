@@ -84,7 +84,7 @@ def run_training():
         logits = slim.fully_connected(prelogits,
                                       config.nrof_classes,
                                       activation_fn=None,
-                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
+                                      weights_initializer=slim.initializers.xavier_initializer(),
                                       weights_regularizer=slim.l2_regularizer(5e-5),
                                       scope='Logits',
                                       reuse=False)
@@ -148,7 +148,7 @@ def run_training():
                     if(step%config.display_iter==0):
                         print "step:%d lr:%f time:%.3f total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch)
                         use_time=0
-                    if (step%config.save_iter==0):
+                    if (step%config.test_save_iter==0):
                         filename_cpkt = os.path.join(models_dir, "%d.ckpt"%step)
                         saver.save(sess, filename_cpkt)
 
