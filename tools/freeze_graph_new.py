@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import argparse
 import os
 import sys
@@ -53,7 +57,7 @@ def freeze_graph_def(sess, input_graph_def, output_node_names):
             node.op = 'Add'
             if 'use_locking' in node.attr: del node.attr['use_locking']
         elif node.op == 'ArgMax':
-            print " network conain ArgMax ops, which is not support by snpe"
+            print (" network conain ArgMax ops, which is not support by snpe" )
 
     # Get the list of important nodes
     whitelist_names = []

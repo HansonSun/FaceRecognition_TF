@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import importlib
@@ -42,12 +46,12 @@ def single_model_runtime(model_def,img_w,img_h,img_c,device):
                 end_t=time.time()
                 if i!=0:
                     total_time+=(end_t-start_t)
-            print "model_def:%s runtime:%.3f(ms) imgshape:(%d,%d,%d) device:%s"%(model_def,(total_time/20)*1000,img_w,img_h,img_c,device)
+            print ("model_def:%s runtime:%.3f(ms) imgshape:(%d,%d,%d) device:%s"%(model_def,(total_time/20)*1000,img_w,img_h,img_c,device) )
 
 def all_model_runtime(model_def_dir):
     for net in os.listdir(net_dir):
         if net.endswith("py"):
-            print net.split(".")[0]
+            print (net.split(".")[0] )
 
 
 def single_pb_runtime(pb_file,img_w,img_h,img_c,device):
@@ -87,7 +91,7 @@ def single_pb_runtime(pb_file,img_w,img_h,img_c,device):
                 end_t=time.time()
                 if i!=0:
                     total_time+=(end_t-start_t)
-            print "pb file:%s runtime:%.3f(ms) imgshape:(%d,%d,%d) device:%s"%(pb_file,(total_time/100)*1000,img_w,img_h,img_c,device)
+            print ("pb file:%s runtime:%.3f(ms) imgshape:(%d,%d,%d) device:%s"%(pb_file,(total_time/100)*1000,img_w,img_h,img_c,device) )
             
 
 def all_pb_runtime(pb_file_dir):

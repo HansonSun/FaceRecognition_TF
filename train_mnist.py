@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
@@ -28,8 +32,8 @@ global_step=tf.Variable(0,trainable=False,name='global_step')
 #-----------------------------------modify here--------------------------------------------------##
 #load network
 network = importlib.import_module(config.train_net)
-print 'trainnet : %s'%config.train_net
-print 'losstype : %s'%config.loss_type_list[config.loss_type]
+print ( 'trainnet : %s'%config.train_net )
+print ( 'losstype : %s'%config.loss_type_list[config.loss_type] )
 
 prelogits,end_points = network.inference(images_placeholder,
                                         phase_train=phase_train_placeholder,

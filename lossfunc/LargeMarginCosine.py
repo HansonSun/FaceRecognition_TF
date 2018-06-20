@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
@@ -45,7 +48,7 @@ def cal_loss_test( ):
     nrof_classes=2
     w_init_method=tf.random_normal_initializer(seed=666)
     logits,loss=cal_loss(embeddings, labels, nrof_classes,w_init=w_init_method)
-    print logits
-    print loss
+    print ( logits )
+    print ( loss )
 if __name__ == "__main__":
     cal_loss_test()

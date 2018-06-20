@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import PIL.Image
 import io
 import numpy as np
@@ -61,9 +65,9 @@ def text_parse_function(imgpath, label):
 	if config.input_test_flag==0:
 		img = tf.cast(img, tf.float32)
 		# standardize the image
-		if config.process_type==0:
+		if config.img_preprocess_type==0:
 			img=tf.image.per_image_standardization(img)
-		elif config.process_type==1:
+		elif config.img_preprocess_type==1:
 			img = tf.subtract(img,127.5)
 			img=tf.div(img,128.0)
 		elif config.process_type==2:
@@ -161,7 +165,7 @@ def read_text_test():
 				images, labels = sess.run(next_element)
 				cv2.imshow('test', images[1, ...])
 				cv2.waitKey(0)
-				print labels
+				print (labels )
 
 			except tf.errors.OutOfRangeError:
 				print("End of dataset")
@@ -181,7 +185,7 @@ def read_tfrecord_test():
 				images, labels = sess.run(next_element)
 				cv2.imshow('test', images[1, ...])
 				cv2.waitKey(0)
-				print labels
+				print (labels )
 			except tf.errors.OutOfRangeError:
 				print("End of dataset")
 

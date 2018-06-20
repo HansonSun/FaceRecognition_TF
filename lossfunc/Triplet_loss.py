@@ -1,4 +1,6 @@
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 def triplet_loss(anchor, positive, negative, alpha):
     """Calculate the triplet loss according to the FaceNet paper

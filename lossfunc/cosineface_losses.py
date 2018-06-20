@@ -1,4 +1,6 @@
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 
 def cosineface_losses(embedding, labels, out_num, w_init=None, s=30., m=0.4):

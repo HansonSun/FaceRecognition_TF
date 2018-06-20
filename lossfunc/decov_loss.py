@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 def decov_loss(xs):
     """Decov loss as described in https://arxiv.org/pdf/1511.06068.pdf
     'Reducing Overfitting In Deep Networks by Decorrelating Representation'

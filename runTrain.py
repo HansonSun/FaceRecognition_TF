@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import sys
@@ -146,7 +150,7 @@ def run_training():
 
                     #display train result
                     if(step%config.display_iter==0):
-                        print "step:%d lr:%f time:%.3f total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch)
+                        print ("step:%d lr:%f time:%.3f total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch) )
                         use_time=0
                     if (step%config.test_save_iter==0):
                         filename_cpkt = os.path.join(models_dir, "%d.ckpt"%step)

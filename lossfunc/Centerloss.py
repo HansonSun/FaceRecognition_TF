@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
@@ -60,7 +63,7 @@ def cal_loss_test( ):
     sess.run(tf.global_variables_initializer())
     sess.run(tf.local_variables_initializer())
     loss_v= sess.run(loss)
-    print loss_v
+    print (loss_v )
     sess.close()
 if __name__ == "__main__":
     cal_loss_test()
