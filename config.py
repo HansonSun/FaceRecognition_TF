@@ -6,9 +6,9 @@ dataset_img_width=128
 dataset_img_height=128
 
 nrof_classes=-1  #the code can auto infernce from dataset path
-batch_size=512
+batch_size=90
 display_iter=10
-test_save_iter=1000
+test_save_iter=5000
 max_nrof_epochs=1000
 models_dir="saved_models/"
 model_def="inception_resnet_v1"
@@ -20,24 +20,36 @@ feature_flip=0     #when set feature filp to 1 ,it will get twice size of featur
 feature_normlize=0
 ##--------------benchmark test----------------------------------##
 test_lfw=1  #topn save must set lfw test flage to 1
-lfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/LFW/lfw_facenet_112x112"
+lfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/LFW/lfw_facecroponly_zoom0.10"
+lfw_format="jpg"
+
 test_agedb=0
 agedb_dateset_path="/home/hanson/valid_dataset/FaceRecognize/AGEDB"
+agedb_format="jpg"
+
 test_cfp=0
 cfp_dateset_path="/home/hanson/valid_dataset/FaceRecognize/CFP/Images_112x112"
+cfp_format="png"
+
 test_ytf=0
-youtube_dateset_path="/home/hanson/valid_dataset/FaceRecognize/YTF/youtube/frame_images_DB"
+ytf_dateset_path="/home/hanson/valid_dataset/FaceRecognize/YTF/youtube/frame_images_DB"
+ytf_format="png"
+
 test_sllfw=0
 sllfw_dateset_path="home/hanson/valid_dataset/FaceRecognize/sllfw"
+sllfw_format="jpg"
+
 test_calfw=0
 calfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/CALFW"
+calfw_format="jpg"
+
 test_cplfw=0
 cplfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/CPLFW"
-
+cplfw_format="png"
 ##--------------------hyper parameter---------------------------##
 lr_type_list=['exponential_decay','piecewise_constant','manual_modify']
 lr_type=lr_type_list[0]
-learning_rate=0.1  #if learning_rate is -1,use learning_rate schedule file
+learning_rate=0.05  #if learning_rate is -1,use learning_rate schedule file
 #expontial decay
 learning_rate_decay_step=1000
 learning_rate_decay_rate=0.98
@@ -51,7 +63,7 @@ modify_step=100
 optimizer_list=['ADAGRAD','ADADELTA','ADAM','RMSPROP','MOM']
 optimizer=optimizer_list[2]
 moving_average_decay=0.9999
-weight_decay=5e-5
+weight_decay=5e-4
 gpu_memory_fraction=1
 
 ##---------------------Data Augment-----------------------------##
@@ -79,11 +91,16 @@ contrast_range=[0.5,1.5]
 random_color_saturation=0
 saturaton_range=[0.5,1.5]
 #image preprocess type
+# 0: image=(image-mean)/std
+# 1: image=(image-127.5)/128.0
+# 2: image=image/255.0
 img_preprocess_type=1
+
+
 
 ##-----------------------loss function paramter------------------------------##
 loss_type_list=['softmax','Centerloss','AdditiveAngularMargin','AdditiveMargin','AngularMargin','LargeMarginCosine']
-loss_type=1
+loss_type=0
 
 #Centerloss param
 Centerloss_lambda=1e-2

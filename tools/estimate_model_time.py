@@ -25,8 +25,7 @@ def single_model_runtime(model_def,img_w,img_h,img_c,device):
         phase_train_placeholder = tf.placeholder(tf.bool, name='phase_train')
         image_input_placeholder= tf.placeholder(tf.float32,shape=[1,img_h,img_w,img_c],name="input")
         network = importlib.import_module(model_def)
-        prelogits,_ = network.inference(image_input_placeholder,
-                                        phase_train=phase_train_placeholder)
+        prelogits,_ = network.inference(image_input_placeholder,phase_train=phase_train_placeholder)
         with tf.Session() as sess:
 
             sess.run(tf.global_variables_initializer())

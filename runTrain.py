@@ -57,7 +57,7 @@ def run_training():
 
     #2.load dataset and define placeholder
     print ("loading dataset...")
-    iterator,next_element = input_data.img_input_data( config.training_dateset_path,config.batch_size)
+    iterator,next_element = input_data.input_images_data( config.training_dateset_path,config.batch_size)
     phase_train_placeholder = tf.placeholder(tf.bool, name='phase_train')
     images_placeholder = tf.placeholder(name='input', shape=[None, config.input_img_height,config.input_img_width, 3], dtype=tf.float32)
     labels_placeholder = tf.placeholder(name='labels', shape=[None, ], dtype=tf.int64)
@@ -78,11 +78,18 @@ def run_training():
         logits = slim.fully_connected(prelogits,
                                       config.nrof_classes,
                                       activation_fn=None,
-                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
-                                      weights_regularizer=slim.l2_regularizer(5e-5),
-                                      scope='Logits',reuse=False)
+                                      weights_initializer=slim.initializers.xavier_initializer(),
+                                      weights_regularizer=slim.l2_regularizer(5e-4),
+                                      scope='Logits',
+                                      reuse=False)
         softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels_placeholder),name="loss")
+
+        # Norm for the prelogits
+        eps = 1e-4
+        prelogits_norm = tf.reduce_mean(tf.norm(tf.abs(prelogits)+eps, ord=1, axis=1))
+        tf.add_to_collection('losses', prelogits_norm * 5e-4)
         tf.add_to_collection('losses', softmaxloss)
+
     elif config.loss_type==1: #center loss
         lossfunc=importlib.import_module(config.loss_type_list[config.loss_type])
         logits = slim.fully_connected(prelogits,

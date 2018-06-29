@@ -7,9 +7,10 @@ import io
 import numpy as np
 import cv2
 import tensorflow as tf
-import os
+import os,sys
 import config
-from facetools.dataset import *
+sys.path.append("/home/hanson/work/facetools_install/facetools")
+from dataset import *
 import time
 
 
@@ -131,11 +132,11 @@ def tfrecord_parse_function(example_proto):
 	label = tf.cast(features['label'], tf.int64)
 	return img, label
 
-def img_input_data(dataset_path,batch_size):
+def input_images_data(dataset_path,batch_size):
 	img_dataset=ImageDatasetReader([dataset_path])
 	img_paths,labels=img_dataset.paths_and_labels()
 	dataset=tf.data.Dataset.from_tensor_slices((img_paths,labels))
-	dataset = dataset.map(text_parse_function)
+	dataset = dataset.map(text_parse_function,num_parallel_calls=4)
 	dataset = dataset.shuffle(buffer_size=10000)
 	dataset = dataset.batch(batch_size)
 	iterator = dataset.make_initializable_iterator()
@@ -143,7 +144,7 @@ def img_input_data(dataset_path,batch_size):
 	config.nrof_classes=img_dataset.total_identity
 	return iterator,next_element
 
-def tfrecord_input_data(record_path,batch_size):
+def input_tfrecord_data(record_path,batch_size):
 	record_dataset = tf.data.TFRecordDataset(record_path)
 	record_dataset = record_dataset.map(tfrecord_parse_function)
 	record_dataset = record_dataset.shuffle(buffer_size=50000)
@@ -153,9 +154,9 @@ def tfrecord_input_data(record_path,batch_size):
 	return iterator,next_element,_
 
 
-def read_text_test():
+def read_images_test():
 	config.input_test_flag=1
-	iterator,next_element=img_input_data("/home/hanson/dataset/test_align_144x144",2)
+	iterator,next_element=input_images_data("/home/hanson/dataset/test",batch_size=2)
 	sess = tf.Session()
 
 	for i in range(10):
@@ -191,4 +192,4 @@ def read_tfrecord_test():
 
 
 if __name__ == '__main__':
-	read_text_test()
+	read_images_test()

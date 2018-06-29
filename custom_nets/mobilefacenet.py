@@ -67,5 +67,5 @@ def inference(images, phase_train=True, bottleneck_layer_size=128, weight_decay=
             inputs=slim.separable_convolution2d(inputs,512,[7,7],1,stride=1,scope="gdconv7_7")
             #input 1x1x512
             inputs=slim.conv2d(inputs,bottleneck_layer_size,[1,1],stride=1,activation_fn=None,scope="lconv1_1")
-
+            print inputs.shape
     return inputs,end_points
