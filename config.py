@@ -1,9 +1,13 @@
 import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list,if the input dataset is image dataset ,you needn't set the nrof_classes
-training_dateset_path = "/home/hanson/dataset/VGGFACE2/train_align_182"
+training_dateset_path = "/home/hanson/dataset/glasses_fr_dataset"
 dataset_img_width=128
 dataset_img_height=128
+##-----------------finetune process parameter-----------------------------------##
+finetune_dataset_path="/home/hanson/dataset/glasses_fr_dataset"
+finetune_model_dir="ToBeConvertModels"
+finetune_nrof_classes=-1
 
 nrof_classes=-1  #the code can auto infernce from dataset path
 batch_size=90
@@ -18,6 +22,8 @@ topn_threshold=98
 distance_metric=0  #0:euclidean distance 1: cosine distance
 feature_flip=0     #when set feature filp to 1 ,it will get twice size of feature
 feature_normlize=0
+
+
 ##--------------benchmark test----------------------------------##
 test_lfw=1  #topn save must set lfw test flage to 1
 lfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/LFW/lfw_facecroponly_zoom0.10"
