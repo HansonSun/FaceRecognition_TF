@@ -4,3 +4,4 @@ saved_models/
 logs/
 tfrecord_dataset/
 release_pb/
+dataset_output/

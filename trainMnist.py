@@ -9,8 +9,8 @@ from tensorflow.examples.tutorials.mnist import input_data
 import importlib
 import tensorflow.contrib.slim as slim
 import sys
-sys.path.append("custom_nets")
-sys.path.append("lossfunc")
+sys.path.append("TrainingNet")
+sys.path.append("TrainingLoss")
 import numpy as np
 import tools_func
 import config

@@ -491,7 +491,7 @@ def resnet(images,units,num_stages, filter_list, bottle_neck, bottleneck_layer_s
     fc1 = get_fc1(body, bottleneck_layer_size, fc_type)
     return fc1
 
-def inference(images,phase_train=True,num_layers=100,bottleneck_layer_size=256, **kwargs):
+def inference(images,phase_train=True,num_layers=34,bottleneck_layer_size=256, **kwargs):
     end_points={}
     if num_layers >= 101:
         filter_list = [64, 256, 512, 1024, 2048]

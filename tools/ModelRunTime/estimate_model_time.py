@@ -8,12 +8,12 @@ import importlib
 import tensorflow as tf
 import cv2
 import sys
-sys.path.append("../custom_nets")
+sys.path.append("../../TrainingNets/tf")
 sys.path.append("../")
 import numpy as np
 import time
 import argparse
-import config
+
 
 def single_model_runtime(model_def,img_w,img_h,img_c,device):
     if device=="gpu":

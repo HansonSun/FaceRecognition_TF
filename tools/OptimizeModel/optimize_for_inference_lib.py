@@ -129,7 +129,7 @@ def optimize_for_inference(input_graph_def, input_node_names, output_node_names,
   ensure_graph_is_valid(input_graph_def)
   optimized_graph_def = input_graph_def
   output_graph_def = remove_assert_depend(optimized_graph_def)
-  print('hello')
+  print('start to optimize...')
   optimized_graph_def = strip_unused_lib.strip_unused(
       output_graph_def, input_node_names, output_node_names,
       placeholder_type_enum)
