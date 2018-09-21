@@ -30,7 +30,7 @@ def expand(inputs, num_outputs):
 def inference(images,
               keep_probability=0.8,
               phase_train=True,
-              bottleneck_layer_size=128,
+              feature_length=128,
               weight_decay=0.0,
               reuse=None,
               w_init=slim.xavier_initializer_conv2d(uniform=True)
@@ -74,4 +74,4 @@ def inference(images,
                 net=tf.reshape(net,(net.shape[0],(net.shape[1]*net.shape[2]*net.shape[3]) ) )
                 net = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None,
                         scope='Bottleneck', reuse=False)
-    return net, None
+    return net

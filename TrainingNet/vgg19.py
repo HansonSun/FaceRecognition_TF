@@ -6,7 +6,7 @@ def inference(inputs,
               phase_train=True,
               keep_probability=0.5,
               weight_decay=0.0,
-              bottleneck_layer_size=128,
+              feature_length=128,
               scope='vgg_16',
               w_init=slim.xavier_initializer_conv2d(uniform=True)):
     end_points={}
@@ -27,10 +27,10 @@ def inference(inputs,
             net = slim.max_pool2d(net, [2, 2], scope='pool5')
             # Use conv2d instead of fully_connected layers.
             net = slim.fully_connected(net, 4096,scope='fc6')
-            net = slim.dropout(net, keep_probability, is_training=phase_train,
+            net = slim.dropout(net, feature_length, is_training=phase_train,
                              scope='dropout6')
             net = slim.fully_connected(net, bottleneck_layer_size,  scope='fc7')
-            net = slim.dropout(net, keep_probability, is_training=phase_train,
+            net = slim.dropout(net, feature_length, is_training=phase_train,
                              scope='dropout7')
 
             return net, end_points

@@ -10,8 +10,7 @@ def MFM(net):
 	eltwise=tf.maximum(slice1,slice2)
 	return eltwise
 
-def inference(image,phase_train=True,bottleneck_layer_size=128,weight_decay=5e-5):
-	end_points={}
+def inference(image,phase_train=True,feature_length=128,weight_decay=5e-5):
 	with slim.arg_scope([slim.conv2d, slim.fully_connected],activation_fn=None,
 					weights_initializer=slim.xavier_initializer_conv2d(uniform=True),
 					weights_regularizer=slim.l2_regularizer(0.1)):
@@ -45,5 +44,4 @@ def inference(image,phase_train=True,bottleneck_layer_size=128,weight_decay=5e-5
 		#MFM_FC1
 		net=MFM(net)
 
-
-	return net,end_points
+	return net

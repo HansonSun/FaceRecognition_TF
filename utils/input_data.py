@@ -8,10 +8,11 @@ import numpy as np
 import cv2
 import tensorflow as tf
 import os,sys
-import config
-sys.path.append("/home/hanson/work/facetools_install/facetools")
+sys.path.append("/home/hanson/facetools/lib")
+sys.path.append("../")
 from dataset import *
 import time
+import config
 
 
 def random_rotate_image(image,lowangle,highangle):
