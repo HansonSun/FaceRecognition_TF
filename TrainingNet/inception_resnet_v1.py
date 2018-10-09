@@ -105,7 +105,12 @@ def reduction_b(net):
                         tower_conv2_2, tower_pool], 3)
     return net
 
-def inference(images, keep_probability=0.8, phase_train=True,bottleneck_layer_size=128, weight_decay=0.0, reuse=None):
+def inference(images, 
+              dropout_keep_prob=0.8, 
+              phase_train=True,
+              feature_length=128, 
+              weight_decay=0.0, 
+              reuse=None):
     batch_norm_params = {
         # Decay for the moving averages.
         'decay': 0.995,
@@ -123,7 +128,7 @@ def inference(images, keep_probability=0.8, phase_train=True,bottleneck_layer_si
                         normalizer_fn=slim.batch_norm,
                         normalizer_params=batch_norm_params):
         return inception_resnet_v1(images, is_training=phase_train,
-              dropout_keep_prob=keep_probability, bottleneck_layer_size=bottleneck_layer_size, reuse=reuse)
+              dropout_keep_prob=dropout_keep_prob, bottleneck_layer_size=feature_length, reuse=reuse)
 
 
 def inception_resnet_v1(inputs, is_training=True,
@@ -131,7 +136,6 @@ def inception_resnet_v1(inputs, is_training=True,
                         bottleneck_layer_size=128,
                         reuse=None,
                         scope='inference'):
-    end_points = {}
 
     with tf.variable_scope(scope, 'inference', [inputs], reuse=reuse):
         with slim.arg_scope([slim.batch_norm, slim.dropout],
@@ -142,63 +146,49 @@ def inception_resnet_v1(inputs, is_training=True,
                 # 149 x 149 x 32
                 net = slim.conv2d(inputs, 32, 3, stride=2, padding='VALID',
                                   scope='Conv2d_1a_3x3')
-                end_points['Conv2d_1a_3x3'] = net
                 # 147 x 147 x 32
                 net = slim.conv2d(net, 32, 3, padding='VALID',
                                   scope='Conv2d_2a_3x3')
-                end_points['Conv2d_2a_3x3'] = net
                 # 147 x 147 x 64
                 net = slim.conv2d(net, 64, 3, scope='Conv2d_2b_3x3')
-                end_points['Conv2d_2b_3x3'] = net
                 # 73 x 73 x 64
                 net = slim.max_pool2d(net, 3, stride=2, padding='VALID',
                                       scope='MaxPool_3a_3x3')
-                end_points['MaxPool_3a_3x3'] = net
                 # 73 x 73 x 80
                 net = slim.conv2d(net, 80, 1, padding='VALID',
                                   scope='Conv2d_3b_1x1')
-                end_points['Conv2d_3b_1x1'] = net
                 # 71 x 71 x 192
                 net = slim.conv2d(net, 192, 3, padding='VALID',
                                   scope='Conv2d_4a_3x3')
-                end_points['Conv2d_4a_3x3'] = net
                 # 35 x 35 x 256
                 net = slim.conv2d(net, 256, 3, stride=2, padding='VALID',
                                   scope='Conv2d_4b_3x3')
-                end_points['Conv2d_4b_3x3'] = net
 
                 # 5 x Inception-resnet-A
                 net = slim.repeat(net, 5, block35, scale=0.17)
-                end_points['Mixed_5a'] = net
 
                 # Reduction-A
                 with tf.variable_scope('Mixed_6a'):
                     net = reduction_a(net, 192, 192, 256, 384)
-                end_points['Mixed_6a'] = net
 
                 # 10 x Inception-Resnet-B
                 net = slim.repeat(net, 10, block17, scale=0.10)
-                end_points['Mixed_6b'] = net
 
                 # Reduction-B
                 with tf.variable_scope('Mixed_7a'):
                     net = reduction_b(net)
-                end_points['Mixed_7a'] = net
 
                 # 5 x Inception-Resnet-C
                 net = slim.repeat(net, 5, block8, scale=0.20)
-                end_points['Mixed_8a'] = net
 
                 net = block8(net, activation_fn=None)
-                end_points['Mixed_8b'] = net
+
 
                 with tf.variable_scope('PreLogits'):
-                    end_points['PrePool'] = net
                     #pylint: disable=no-member
                     net = slim.avg_pool2d(net, net.get_shape()[1:3], padding='VALID',scope='AvgPool_1a_8x8')
                     net = slim.flatten(net)
                     net = slim.dropout(net, dropout_keep_prob, is_training=is_training,scope='Dropout')
-                    end_points['PreLogitsFlatten'] = net
 
                 net = slim.fully_connected(net, bottleneck_layer_size, activation_fn=None,scope='Bottleneck', reuse=False)
-    return net, end_points
+    return net

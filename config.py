@@ -1,7 +1,7 @@
 import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list,if the input dataset is image dataset ,you needn't set the nrof_classes
-training_dateset_path = "/home/hanson/dataset/glasses_fr_dataset"
+training_dateset_path = "/home/hanson/dataset/VGGFACE2/train_facenet_128"
 dataset_img_width=128
 dataset_img_height=128
 ##-----------------finetune process parameter-----------------------------------##
@@ -15,44 +15,45 @@ display_iter=10
 test_save_iter=5000
 max_nrof_epochs=1000
 models_dir="saved_models/"
-fr_model_def="vgg11"         #train facerecognize model
+fr_model_def="inception_resnet_v1"         #train facerecognize model
 classification_model_def="vgg11"   #loss test model
-embedding_size=512 #feature output size
+feature_length=512 #feature output size
 input_test_flag=0  #used to test input data
 topn_threshold=98
-distance_metric=0  #0:euclidean distance 1: cosine distance
+distance_metric="euclidean"  #euclidean distance | cosine distance
 feature_flip=0     #when set feature filp to 1 ,it will get twice size of feature
 feature_normlize=0
 
 
 ##--------------benchmark test----------------------------------##
-test_lfw=1  #topn save must set lfw test flage to 1
-lfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/LFW/lfw_facecroponly_zoom0.10"
-lfw_format="jpg"
+benchmark_dict={
+"test_lfw":1,  #topn save must set lfw test flage to 1
+"lfw_path":"/home/hanson/valid_dataset/FaceRecognize/LFW/lfw_facecroponly_zoom0.10",
+"lfw_format":"jpg",
 
-test_agedb=0
-agedb_dateset_path="/home/hanson/valid_dataset/FaceRecognize/AGEDB"
-agedb_format="jpg"
+"test_agedb":0,
+"agedb_path":"/home/hanson/valid_dataset/FaceRecognize/AGEDB",
+"agedb_format":"jpg",
 
-test_cfp=0
-cfp_dateset_path="/home/hanson/valid_dataset/FaceRecognize/CFP/Images_112x112"
-cfp_format="png"
+"test_cfp":0,
+"cfp_path":"/home/hanson/valid_dataset/FaceRecognize/CFP/Images_112x112",
+"cfp_format":"png",
 
-test_ytf=0
-ytf_dateset_path="/home/hanson/valid_dataset/FaceRecognize/YTF/youtube/frame_images_DB"
-ytf_format="png"
+"test_ytf":0,
+"ytf_path":"/home/hanson/valid_dataset/FaceRecognize/YTF/youtube/frame_images_DB",
+"ytf_format":"png",
 
-test_sllfw=0
-sllfw_dateset_path="home/hanson/valid_dataset/FaceRecognize/sllfw"
-sllfw_format="jpg"
+"test_sllfw":0,
+"sllfw_path":"home/hanson/valid_dataset/FaceRecognize/sllfw",
+"sllfw_format":"jpg",
 
-test_calfw=0
-calfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/CALFW"
-calfw_format="jpg"
+"test_calfw":0,
+"calfw_path":"/home/hanson/valid_dataset/FaceRecognize/CALFW",
+"calfw_format":"jpg",
 
-test_cplfw=0
-cplfw_dateset_path="/home/hanson/valid_dataset/FaceRecognize/CPLFW"
-cplfw_format="png"
+"test_cplfw":0,
+"cplfw_path":"/home/hanson/valid_dataset/FaceRecognize/CPLFW",
+"cplfw_format":"png"}
 ##--------------------hyper parameter---------------------------##
 lr_type_list=['exponential_decay','piecewise_constant','manual_modify']
 lr_type=lr_type_list[0]
