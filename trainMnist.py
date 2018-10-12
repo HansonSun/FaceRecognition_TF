@@ -10,9 +10,10 @@ import tensorflow.contrib.slim as slim
 import sys
 sys.path.append("TrainingLoss")
 import numpy as np
-from utils.tools_func import *
 import matplotlib.pyplot as plt
 import time
+from mpl_toolkits.mplot3d import Axes3D
+
 
 colorValues = ['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#0000ff','#ff00ff', '#990000', '#999900', '#009900', '#009999']
 LossNames   = ['softmax','Centerloss','AdditiveAngularMargin','AdditiveMargin','AngularMargin','LargeMarginCosine']
@@ -22,9 +23,9 @@ class MnistEval():
         # Get MNIST Data
         self.mnist = input_data.read_data_sets('classification_dataset/MNIST/', one_hot=False)
         self.nrof_classes=10
-        self.batch_size = 100
+        self.batch_size = 200
         self.test_iter=1000
-        self.total_steps = 10000
+        self.total_steps = 20000
         self.learning_rate=0.001
         self.feature_length=2
         self.test_batch_size=200
@@ -36,8 +37,8 @@ class MnistEval():
         self.global_step  = tf.Variable(0,trainable=False,name='global_step')
 
         self.color_list=[ (colorValues[i]) for i in self.mnist.test.labels]
-        fig=plt.figure(figsize=(16,9))
-        self.ax = fig.add_subplot(111)if self.feature_length==2 else fig.add_subplot(111, projection = '3d')
+        self.fig=plt.figure(figsize=(22,12))
+        self.ax = self.fig.add_subplot(111) if self.feature_length==2 else self.fig.add_subplot(111, projection = '3d')
 
     def model(self,inputs):
         with slim.arg_scope([slim.conv2d, slim.fully_connected],
@@ -99,7 +100,6 @@ class MnistEval():
         # Run
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            # Train 10000 steps
             for step in range(self.total_steps + 1):
                 images, labels = self.mnist.train.next_batch(self.batch_size)
                 images=np.reshape(images,(self.batch_size,28,28,1))
@@ -122,25 +122,24 @@ class MnistEval():
                     self.test_features=np.row_stack(self.test_features)
                     
                     print ("step %d test accuracy %.4f"%(step,total_acc*1.0/test_iter) )
-            self.draw_features("images/iter_%d.png"%int(step/self.test_iter),self.test_features,self.mnist.test.labels)
+            self.draw_features("loss_images/%d.png"%int(step/self.test_iter),self.test_features,self.mnist.test.labels)
 
     def draw_features(self,savepath,features,labels):
-        #print ("saveing the features")
         if features.shape[1]==2:
             self.ax.scatter(features[...,0],features[...,1],c=self.color_list)
         elif features.shape[1]==3:
             self.ax.scatter(features[...,0],features[...,1],features[...,2],c=self.color_list)
         plt.savefig(savepath)
-        plt.draw()
         plt.show()
-        plt.pause(0.001)
 
+        #plt.draw()
+        #self.fig.canvas.flush_events()
+        #time.sleep(0.001)
+        
     def run(self):
         self.forward()
         self.optimizer()
         self.process()
-        #self.draw_feature()
-
 
 if __name__ =="__main__":
     demo=MnistEval(loss_type=1)

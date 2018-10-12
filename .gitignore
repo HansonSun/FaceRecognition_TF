@@ -6,3 +6,4 @@ tfrecord_dataset/
 release_pb/
 dataset_output/
 test/
+loss_images/
