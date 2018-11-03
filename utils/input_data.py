@@ -8,9 +8,8 @@ import numpy as np
 import cv2
 import tensorflow as tf
 import os,sys
-sys.path.append("/home/hanson/facetools/lib")
 sys.path.append("../")
-from dataset import *
+import faceutils as fu
 import time
 import config
 
@@ -134,11 +133,11 @@ def tfrecord_parse_function(example_proto):
 	return img, label
 
 def input_images_data(dataset_path,batch_size):
-	img_dataset=ImageDatasetReader([dataset_path])
+	img_dataset=fu.dataset.ImageDatasetReader([dataset_path])
 	img_paths,labels=img_dataset.paths_and_labels()
 	dataset=tf.data.Dataset.from_tensor_slices((img_paths,labels))
 	dataset = dataset.map(text_parse_function,num_parallel_calls=4)
-	dataset = dataset.shuffle(buffer_size=10000)
+	dataset = dataset.shuffle(buffer_size=5000)
 	dataset = dataset.batch(batch_size)
 	iterator = dataset.make_initializable_iterator()
 	next_element = iterator.get_next()
@@ -148,7 +147,7 @@ def input_images_data(dataset_path,batch_size):
 def input_tfrecord_data(record_path,batch_size):
 	record_dataset = tf.data.TFRecordDataset(record_path)
 	record_dataset = record_dataset.map(tfrecord_parse_function)
-	record_dataset = record_dataset.shuffle(buffer_size=50000)
+	record_dataset = record_dataset.shuffle(buffer_size=5000)
 	record_dataset = record_dataset.batch(batch_size)
 	iterator = record_dataset.make_initializable_iterator()
 	next_element = iterator.get_next()
@@ -157,7 +156,7 @@ def input_tfrecord_data(record_path,batch_size):
 
 def read_images_test():
 	config.input_test_flag=1
-	iterator,next_element=input_images_data("/home/hanson/dataset/test",batch_size=2)
+	iterator,next_element=input_images_data("/home/hanson/dataset/test",batch_size=1)
 	sess = tf.Session()
 
 	for i in range(10):
@@ -165,9 +164,9 @@ def read_images_test():
 		while True:
 			try:
 				images, labels = sess.run(next_element)
-				cv2.imshow('test', images[1, ...])
-				cv2.waitKey(0)
 				print (labels )
+				cv2.imshow('test', images[0])
+				cv2.waitKey(0)
 
 			except tf.errors.OutOfRangeError:
 				print("End of dataset")
@@ -176,7 +175,7 @@ def read_images_test():
 
 def read_tfrecord_test():
 	config.input_test_flag=1
-	iterator,next_element=tfrecord_input_data('tfrecord_dataset/ms1m_train.tfrecords',2)
+	iterator,next_element=tfrecord_input_data('tfrecord_dataset/ms1m_train.tfrecords',1)
 	sess = tf.Session()
 
 	# begin iteration
@@ -185,9 +184,10 @@ def read_tfrecord_test():
 		while True:
 			try:
 				images, labels = sess.run(next_element)
-				cv2.imshow('test', images[1, ...])
-				cv2.waitKey(0)
 				print (labels )
+				cv2.imshow('test', images[0])
+				cv2.waitKey(0)
+				
 			except tf.errors.OutOfRangeError:
 				print("End of dataset")
 

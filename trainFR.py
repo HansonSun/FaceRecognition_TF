@@ -97,10 +97,18 @@ class trainFR():
 
         #adjust learning rate
         self.global_step = tf.Variable(0, trainable=False)
+        self.epoch_input = tf.placeholder(name='epoch',dtype=tf.int64)
         if config.lr_type=='exponential_decay':
-            self.learning_rate = tf.train.exponential_decay(config.learning_rate,self.global_step,config.learning_rate_decay_step,config.learning_rate_decay_rate,staircase=True)
+            self.learning_rate = tf.train.exponential_decay(config.learning_rate,
+                                                            self.global_step,
+                                                            config.learning_rate_decay_step,
+                                                            config.learning_rate_decay_rate,
+                                                            staircase=True)
         elif config.lr_type=='piecewise_constant':
-            self.learning_rate = tf.train.piecewise_constant(self.global_step, config.boundaries, config.values)
+            print("ise tfsjf")
+            self.learning_rate = tf.train.piecewise_constant(self.epoch_input, 
+                                                            config.boundaries, 
+                                                            config.values)
         elif config.lr_type=='manual_modify':
             pass
 
@@ -136,7 +144,7 @@ class trainFR():
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
 
-            for epoch in range(config.max_nrof_epochs):
+            for epoch in range(config.max_nrof_epochs): 
                 sess.run(self.traindata_iterator.initializer)
                 while True:
                     use_time=0
@@ -144,21 +152,21 @@ class trainFR():
                         images_train, labels_train = sess.run(self.traindata_next_element)
 
                         start_time=time.time()
-                        input_dict={self.phase_train:True,self.images_input:images_train,self.labels_input:labels_train}
-                        step,lr,train_loss,_,pre_labels,real_labels = sess.run([self.global_step,
-                                                                                self.learning_rate,
-                                                                                self.total_loss,
-                                                                                self.train_op,
-                                                                                self.predict_labels,
-                                                                                self.labels_input],
-                                                                                feed_dict=input_dict)
+                        input_dict={self.phase_train:True,self.epoch_input:epoch,self.images_input:images_train,self.labels_input:labels_train}
+                        epoch_input,step,lr,train_loss,_,pre_labels,real_labels = sess.run([self.epoch_input,
+                                                                                      self.global_step,
+                                                                                      self.learning_rate,
+                                                                                      self.total_loss,
+                                                                                      self.train_op,
+                                                                                      self.predict_labels,
+                                                                                      self.labels_input],
+                                                                                      feed_dict=input_dict)
                         end_time=time.time()
                         use_time+=(end_time-start_time)
                         train_acc=np.equal(pre_labels,real_labels).mean()
-
                         #display train result
                         if(step%config.display_iter==0):
-                            print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch) )
+                            print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch_input) )
                             use_time=0
                         
                         if (step%config.test_save_iter==0):

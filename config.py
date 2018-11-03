@@ -1,7 +1,7 @@
 import tensorflow as tf
 ##-----------------train process parameter-----------------------##
 #training dataset path list,if the input dataset is image dataset ,you needn't set the nrof_classes
-training_dateset_path = "/home/hanson/dataset/VGGFACE2/train_facenet_128"
+training_dateset_path = "/home/hanson/dataset/test"
 dataset_img_width=128
 dataset_img_height=128
 ##-----------------finetune process parameter-----------------------------------##
@@ -10,7 +10,7 @@ finetune_model_dir="ToBeConvertModels"
 finetune_nrof_classes=-1
 
 nrof_classes=-1  #the code can auto infernce from dataset path
-batch_size=90
+batch_size=128
 display_iter=10
 test_save_iter=5000
 max_nrof_epochs=1000
@@ -56,14 +56,15 @@ benchmark_dict={
 "cplfw_format":"png"}
 ##--------------------hyper parameter---------------------------##
 lr_type_list=['exponential_decay','piecewise_constant','manual_modify']
-lr_type=lr_type_list[0]
+lr_type=lr_type_list[1]
 learning_rate=0.05  #if learning_rate is -1,use learning_rate schedule file
 #expontial decay
 learning_rate_decay_step=1000
 learning_rate_decay_rate=0.98
 #piecewise constant
-boundaries = [10000, 100000,500000] #the num means iters
-values = [0.1, 0.01, 0.001,0.0001]  #the number means learning rate
+boundaries = [10, 100,200] #the dataset epoch 
+values     = [0.1, 0.01, 0.001,0.0001]  #the number means learning rate
+assert len(values)-len(boundaries)==1
 #manual_modify
 modify_step=100
 
@@ -76,7 +77,7 @@ gpu_memory_fraction=1
 
 ##---------------------Data Augment-----------------------------##
 #open random crop,crop image size must less than dataset image size
-random_crop=1
+random_crop=0
 crop_img_width=112
 crop_img_height=112
 input_img_width  = crop_img_width  if random_crop else dataset_img_width
