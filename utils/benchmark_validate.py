@@ -51,7 +51,7 @@ class benchmark_validate(facerecognize_base):
             self.feature_flip=feature_flip
             self.distance_metric=distance_metric
 
-    def getfeature(self,img_data):
+    def getFeature(self,img_data):
         images = self.load_data([img_data])
         feed_dict = { self.images_placeholder:images ,self.phase_train_placeholder:False}
         emb_array = self.sess.run(self.embeddings, feed_dict=feed_dict)
@@ -62,7 +62,6 @@ class benchmark_validate(facerecognize_base):
         else:
             return emb_array
 
-
 def test_benchmark(model_dir):
     demo=benchmark_validate(model_dir,
                 input_img_width=config.input_img_width,
@@ -71,10 +70,9 @@ def test_benchmark(model_dir):
                 img_preprocess_type=config.img_preprocess_type,
                 feature_flip=config.feature_flip,
                 distance_metric=config.distance_metric)
-
     benchmark=fr_benchmark_test(config.benchmark_dict)
     return benchmark.top_accurate(demo)
 
 
 if __name__ == "__main__":
-   print ( test_benchmark("/home/hanson/work/Facerecognize_TF/saved_models/20180924-161021/models") )
+   print ( test_benchmark("/home/hanson/work/Facerecognize_TF/saved_models/20181104-133018/models") )
