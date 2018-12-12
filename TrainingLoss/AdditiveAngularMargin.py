@@ -15,7 +15,7 @@ def cal_loss(embeddings,
                s=64.,
                m=0.5):
     '''
-    LargeMarginCosine loss as described in https://arxiv.org/abs/1801.07698
+    Additive Angular Margin Loss as described in https://arxiv.org/abs/1801.07698
     'ArcFace: Additive Angular Margin Loss for Deep Face Recognition'
     :param embeddings: the input embedding vectors
     :param labels:  the input labels, the shape should be eg: (batch_size, 1)

@@ -19,7 +19,7 @@ import faceutils as fu
 import scipy
 from facerecognize_base import facerecognize_base
 
-class benchmark_validate(facerecognize_base):
+class model_inference(facerecognize_base):
     def __init__(self,
                 model_dir,
                 input_img_width=112,
@@ -62,6 +62,19 @@ class benchmark_validate(facerecognize_base):
         else:
             return emb_array
 
+<<<<<<< HEAD
+
+def test_benchmark(conf,model_dir):
+    demo=model_inference(model_dir,
+                input_img_width=conf.input_img_width,
+                input_img_height=conf.input_img_height,
+                feature_normlize=conf.feature_normlize,
+                img_preprocess_type=conf.img_preprocess_type,
+                feature_flip=conf.feature_flip,
+                distance_metric=conf.distance_metric)
+
+    benchmark=fr_benchmark_test(conf.benchmark_dict)
+=======
 def test_benchmark(model_dir):
     demo=benchmark_validate(model_dir,
                 input_img_width=config.input_img_width,
@@ -71,8 +84,14 @@ def test_benchmark(model_dir):
                 feature_flip=config.feature_flip,
                 distance_metric=config.distance_metric)
     benchmark=fr_benchmark_test(config.benchmark_dict)
+>>>>>>> a86e270d14564b34620786a1f74b27ec19926c4c
     return benchmark.top_accurate(demo)
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
+    conf=config.get_config()
+    test_benchmark(conf,"/home/hanson/work/FaceRecognition_TF/saved_models/20181211-143643/models")
+=======
    print ( test_benchmark("/home/hanson/work/Facerecognize_TF/saved_models/20181104-133018/models") )
+>>>>>>> a86e270d14564b34620786a1f74b27ec19926c4c
