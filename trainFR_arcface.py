@@ -63,20 +63,20 @@ class trainFR():
             feature_length=self.conf.feature_length)
 
     def loss(self):
-        logits = slim.fully_connected(self.prelogits,
-                                      self.inputdataset.nrof_classes,
-                                      activation_fn=None,
-                                      weights_initializer=slim.initializers.xavier_initializer(),
-                                      weights_regularizer=slim.l2_regularizer(5e-4),
-                                      scope='Logits',
-                                      reuse=False)
-        softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=self.labels_input),name="loss")
-
         # Norm for the prelogits
         eps = 1e-4
         prelogits_norm = tf.reduce_mean(tf.norm(tf.abs(self.prelogits)+eps, ord=1, axis=1))
         tf.add_to_collection('losses', prelogits_norm * 5e-4)
-        tf.add_to_collection('losses', softmaxloss)
+
+        #arcface loss
+        lossfunc=importlib.import_module("AdditiveAngularMargin")
+        logits,custom_loss=lossfunc.cal_loss(self.prelogits,self.labels_input,self.nrof_classes)
+        tf.add_to_collection('losses', custom_loss)
+
+        custom_loss=tf.get_collection("losses")
+        #regularization loss
+        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        self.total_loss=tf.add_n(custom_loss+regularization_losses,name='total_loss')
 
         embeddings = tf.nn.l2_normalize(self.prelogits, 1, 1e-10, name='embeddings')
         self.predict_labels=tf.argmax(logits,1)
@@ -152,7 +152,7 @@ class trainFR():
 
                         #display train result
                         if(step%self.conf.display_iter==0):
-                            print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch) )
+                            print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%.3f"%(step,lr,use_time,train_loss,train_acc,(self.conf.batch_size*step)/self.total_img_num) )
                             use_time=0
                         
                         if (step%self.conf.test_save_iter==0):

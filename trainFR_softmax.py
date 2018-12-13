@@ -119,7 +119,7 @@ class trainFR():
         print ("optimizer use %s"%self.conf.optimizer)
 
         grads = opt.compute_gradients(self.total_loss)
-        update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+        update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)+tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
             apply_gradient_op = opt.apply_gradients(grads, global_step=self.global_step)
 

@@ -62,10 +62,10 @@ class model_inference(facerecognize_base):
         else:
             return emb_array
 
-<<<<<<< HEAD
+
 
 def test_benchmark(conf,model_dir):
-    demo=model_inference(model_dir,
+    model=model_inference(model_dir,
                 input_img_width=conf.input_img_width,
                 input_img_height=conf.input_img_height,
                 feature_normlize=conf.feature_normlize,
@@ -74,24 +74,8 @@ def test_benchmark(conf,model_dir):
                 distance_metric=conf.distance_metric)
 
     benchmark=fr_benchmark_test(conf.benchmark_dict)
-=======
-def test_benchmark(model_dir):
-    demo=benchmark_validate(model_dir,
-                input_img_width=config.input_img_width,
-                input_img_height=config.input_img_height,
-                feature_normlize=config.feature_normlize,
-                img_preprocess_type=config.img_preprocess_type,
-                feature_flip=config.feature_flip,
-                distance_metric=config.distance_metric)
-    benchmark=fr_benchmark_test(config.benchmark_dict)
->>>>>>> a86e270d14564b34620786a1f74b27ec19926c4c
-    return benchmark.top_accurate(demo)
-
+    return benchmark.top_accurate(model)
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     conf=config.get_config()
-    test_benchmark(conf,"/home/hanson/work/FaceRecognition_TF/saved_models/20181211-143643/models")
-=======
-   print ( test_benchmark("/home/hanson/work/Facerecognize_TF/saved_models/20181104-133018/models") )
->>>>>>> a86e270d14564b34620786a1f74b27ec19926c4c
+    test_benchmark(conf,"/home/hanson/work/FaceRecognition_TF/saved_models/20181213-131022/models")

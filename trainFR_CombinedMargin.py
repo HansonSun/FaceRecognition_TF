@@ -10,7 +10,6 @@ sys.path.append("TrainingNet")
 sys.path.append("TrainingLoss")
 import numpy as np
 import tensorflow as tf
-import utils.input_data
 import importlib
 import config
 import tensorflow.contrib.slim as slim
@@ -41,8 +40,8 @@ class trainFR():
         #3. load dataset
         self.inputdataset=fu.TFImageDataset(self.conf)
         self.traindata_iterator,self.traindata_next_element=self.inputdataset.load_image_dataset( buffer_size=20000 )
-
-
+        self.nrof_classes=self.inputdataset.nrof_classes
+        self.total_img_num=self.inputdataset.total_img_num
 
     def make_model(self):
         #2.load dataset and define placeholder

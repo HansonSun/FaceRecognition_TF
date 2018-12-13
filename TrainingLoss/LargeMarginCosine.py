@@ -24,8 +24,11 @@ def cal_loss(embeddings,
     :return: the final cacualted output, this output is send into the tf.nn.softmax directly
     '''
     with tf.variable_scope('cosineface_loss'):
+        print(embeddings.shape)
         # inputs and weights norm
-        embeddings_norm = tf.nn.l2_normalize(embeddings, 0, 1e-10,name="norm_embeddings")
+        embeddings_norm = tf.nn.l2_normalize(embeddings, 1, 1e-10,name="norm_embeddings")
+
+
         weights = tf.get_variable(name='embedding_weights', shape=(embeddings.get_shape().as_list()[-1], nrof_classes),
                                   initializer=w_init, dtype=tf.float32)
         weights_norm = tf.nn.l2_normalize(weights, 0, 1e-10, name='norm_weights')
@@ -42,13 +45,13 @@ def cal_loss(embeddings,
 
 def cal_loss_test( ):
     tfe.enable_eager_execution()
-    embeddings=tf.get_variable(name="embeddings",dtype=tf.float32,shape=[5,16],initializer=tf.random_normal_initializer(seed=223))
+    embeddings=tf.get_variable(name="embeddings",dtype=tf.float32,shape=[6,16],initializer=tf.random_normal_initializer(seed=228))
     np.random.seed(0)
-    labels=np.random.randint(0,1,size=(5))
+    labels=np.random.randint(0,1,size=(6))
     nrof_classes=2
     w_init_method=tf.random_normal_initializer(seed=666)
     logits,loss=cal_loss(embeddings, labels, nrof_classes,w_init=w_init_method)
-    print ( logits )
+    #print ( logits )
     print ( loss )
 if __name__ == "__main__":
     cal_loss_test()

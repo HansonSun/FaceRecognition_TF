@@ -10,7 +10,6 @@ sys.path.append("TrainingNet")
 sys.path.append("TrainingLoss")
 import numpy as np
 import tensorflow as tf
-import utils.input_data
 import importlib
 import config
 import tensorflow.contrib.slim as slim
@@ -19,11 +18,6 @@ from datetime import datetime
 from utils.benchmark_validate import *
 import shutil
 import faceutils as fu
-<<<<<<< HEAD:trainFR_ CosFace.py
-
-
-=======
->>>>>>> a86e270d14564b34620786a1f74b27ec19926c4c:trainFR.py
 
 class trainFR():
     def __init__(self):
@@ -57,8 +51,8 @@ class trainFR():
 
         #3.load model and inference
         network = importlib.import_module(self.conf.fr_model_def)
-        print ("trianing net:%s"%self.conf.fr_model_def)
-        print ("input image size [h:%d w:%d c:%d]"%(self.conf.input_img_height,self.conf.input_img_width,3))
+        print ("training network:%s"%self.conf.fr_model_def)
+        print ("input image : height:%d width:%d channel:%d]"%(self.conf.input_img_height,self.conf.input_img_width,3))
 
         self.prelogits = network.inference(
             self.images_input,
@@ -68,65 +62,18 @@ class trainFR():
             feature_length=self.conf.feature_length)
 
     def loss(self):
-<<<<<<< HEAD:trainFR_ CosFace.py
-        logits = slim.fully_connected(self.prelogits,
-                                      self.nrof_classes,
-                                      activation_fn=None,
-                                      weights_initializer=slim.initializers.xavier_initializer(),
-                                      weights_regularizer=slim.l2_regularizer(5e-4),
-                                      scope='Logits',
-                                      reuse=False)
-        softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=self.labels_input),name="loss")
-
         # Norm for the prelogits
         eps = 1e-4
         prelogits_norm = tf.reduce_mean(tf.norm(tf.abs(self.prelogits)+eps, ord=1, axis=1))
         tf.add_to_collection('losses', prelogits_norm * 5e-4)
-        tf.add_to_collection('losses', softmaxloss)
-=======
 
-        if config.loss_type==0  : #softmax loss
-            print("use softmax")
-            logits = slim.fully_connected(self.prelogits,
-                                          config.nrof_classes,
-                                          activation_fn=None,
-                                          weights_initializer=slim.initializers.xavier_initializer(),
-                                          weights_regularizer=slim.l2_regularizer(config.weight_decay),
-                                          scope='Logits',
-                                          reuse=False)
-            softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=self.labels_input),name="loss")
-
-            # Norm for the prelogits
-            eps = 1e-4
-            prelogits_norm = tf.reduce_mean(tf.norm(tf.abs(self.prelogits)+eps, ord=1, axis=1))
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_norm * 5e-4)
-            tf.add_to_collection('losses', softmaxloss)
-
-
-
-        elif config.loss_type==1: #center loss
-            print ("use",config.loss_type_list[config.loss_type])
-            lossfunc=importlib.import_module(config.loss_type_list[config.loss_type])
-            logits = slim.fully_connected(self.prelogits,
-                                          config.nrof_classes,
-                                          activation_fn=None,
-                                          weights_initializer=slim.initializers.xavier_initializer(),
-                                          weights_regularizer=slim.l2_regularizer(5e-5),
-                                          scope='Logits',
-                                          reuse=False)
-            #softmax loss
-            softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels_placeholder),name="loss")
-            tf.add_to_collection('losses', softmaxloss)
-            #center loss
-            center_loss, _,_ = lossfunc.cal_loss(self.prelogits, labels_input, config.nrof_classes,alpha=config.Centerloss_alpha)
-            tf.add_to_collection('losses', center_loss * config.Centerloss_lambda)
-        else :
-            lossfunc=importlib.import_module(config.loss_type_list[config.loss_type])
-            logits,custom_loss=lossfunc.cal_loss(prelogits,labels_placeholder,config.nrof_classes)
-            tf.add_to_collection('losses', custom_loss)
->>>>>>> a86e270d14564b34620786a1f74b27ec19926c4c:trainFR.py
+        #cosface loss
+        lossfunc=importlib.import_module("LargeMarginCosine")
+        logits,custom_loss=lossfunc.cal_loss(self.prelogits,self.labels_input,self.nrof_classes)
+        tf.add_to_collection('losses', custom_loss)
 
         custom_loss=tf.get_collection("losses")
+        #regularization loss
         regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
         self.total_loss=tf.add_n(custom_loss+regularization_losses,name='total_loss')
 
@@ -135,7 +82,6 @@ class trainFR():
 
         #adjust learning rate
         self.global_step = tf.Variable(0, trainable=False)
-<<<<<<< HEAD:trainFR_ CosFace.py
         if self.conf.lr_type=='exponential_decay':
             self.learning_rate = tf.train.exponential_decay(self.conf.learning_rate,
                                                             self.global_step,
@@ -147,20 +93,6 @@ class trainFR():
                                                              [ int(i*self.total_img_num/self.conf.batch_size) for i in self.conf.boundaries], 
                                                              self.conf.values)
         elif self.conf.lr_type=='manual_modify':
-=======
-        self.epoch_input = tf.placeholder(name='epoch',dtype=tf.int64)
-        if config.lr_type=='exponential_decay':
-            self.learning_rate = tf.train.exponential_decay(config.learning_rate,
-                                                            self.global_step,
-                                                            config.learning_rate_decay_step,
-                                                            config.learning_rate_decay_rate,
-                                                            staircase=True)
-        elif config.lr_type=='piecewise_constant':
-            self.learning_rate = tf.train.piecewise_constant(self.epoch_input, 
-                                                            config.boundaries, 
-                                                            config.values)
-        elif config.lr_type=='manual_modify':
->>>>>>> a86e270d14564b34620786a1f74b27ec19926c4c:trainFR.py
             pass
         print ("learning rate use %s"%self.conf.lr_type)
 
@@ -183,15 +115,20 @@ class trainFR():
         print ("optimizer use %s"%self.conf.optimizer)
 
         grads = opt.compute_gradients(self.total_loss)
-        update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+        update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)+tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
-            self.train_op = opt.apply_gradients(grads, global_step=self.global_step)
+            apply_gradient_op = opt.apply_gradients(grads, global_step=self.global_step)
+        variable_averages = tf.train.ExponentialMovingAverage(0.9999, self.global_step)
+        variables_averages_op = variable_averages.apply(tf.trainable_variables())
+
+        with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
+            self.train_op = tf.no_op(name='train')
+
+        return self.train_op
 
 
     def process(self):
         saver=tf.train.Saver(tf.trainable_variables(),max_to_keep=3)
-
-<<<<<<< HEAD:trainFR_ CosFace.py
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
@@ -218,7 +155,7 @@ class trainFR():
 
                         #display train result
                         if(step%self.conf.display_iter==0):
-                            print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch) )
+                            print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%.3f"%(step,lr,use_time,train_loss,train_acc,(self.conf.batch_size*step)/self.total_img_num) )
                             use_time=0
                         
                         if (step%self.conf.test_save_iter==0):
@@ -233,55 +170,10 @@ class trainFR():
                                     shutil.copyfile(os.path.join(self.models_dir, "%d.ckpt.meta"%step),os.path.join(self.topn_models_dir, "%d.ckpt.meta"%step))
                                     shutil.copyfile(os.path.join(self.models_dir, "%d.ckpt.index"%step),os.path.join(self.topn_models_dir, "%d.ckpt.index"%step))
                                     shutil.copyfile(os.path.join(self.models_dir, "%d.ckpt.data-00000-of-00001"%step),os.path.join(self.topn_models_dir, "%d.ckpt.data-00000-of-00001"%step))
-                            
-=======
-        sess=fu.session()
-        sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
 
-        for epoch in range(config.max_nrof_epochs): 
-            sess.run(self.traindata_iterator.initializer)
-            while True:
-                use_time=0
-                try:
-                    images_train, labels_train = sess.run(self.traindata_next_element)
-
-                    start_time=time.time()
-                    input_dict={self.phase_train:True,self.epoch_input:epoch,self.images_input:images_train,self.labels_input:labels_train}
-                    epoch_input,step,lr,train_loss,_,pre_labels,real_labels = sess.run([self.epoch_input,
-                                                                                  self.global_step,
-                                                                                  self.learning_rate,
-                                                                                  self.total_loss,
-                                                                                  self.train_op,
-                                                                                  self.predict_labels,
-                                                                                  self.labels_input],
-                                                                                  feed_dict=input_dict)
-                    end_time=time.time()
-                    use_time+=(end_time-start_time)
-                    train_acc=np.equal(pre_labels,real_labels).mean()
-                    #display train result
-                    if(step%config.display_iter==0):
-                        print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch_input) )
-                        use_time=0
-                    
-                    if (step%config.test_save_iter==0):
-                        filename_cpkt = os.path.join(self.models_dir, "%d.ckpt"%step)
-                        saver.save(sess, filename_cpkt)
-                        
-                        if config.benchmark_dict["test_lfw"] :
-                            acc_dict=test_benchmark(os.path.join(self.models_dir))
-                            if acc_dict["lfw_acc"]>config.topn_threshold:
-                                self.topn_file.write("%s %s\n"%(os.path.join(self.topn_models_dir, "%d.ckpt"%step),str(acc_dict)) )
-                                shutil.copyfile(os.path.join(self.models_dir, "%d.ckpt.meta"%step),os.path.join(self.topn_models_dir, "%d.ckpt.meta"%step))
-                                shutil.copyfile(os.path.join(self.models_dir, "%d.ckpt.index"%step),os.path.join(self.topn_models_dir, "%d.ckpt.index"%step))
-                                shutil.copyfile(os.path.join(self.models_dir, "%d.ckpt.data-00000-of-00001"%step),os.path.join(self.topn_models_dir, "%d.ckpt.data-00000-of-00001"%step))
->>>>>>> a86e270d14564b34620786a1f74b27ec19926c4c:trainFR.py
-                        
-                    
-                except tf.errors.OutOfRangeError:
-                    print("End of epoch ")
-                    break
-        sess.close()
+                    except tf.errors.OutOfRangeError:
+                        print("End of epoch ")
+                        break
 
     def run(self):
         self.make_model()

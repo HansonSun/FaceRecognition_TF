@@ -10,7 +10,6 @@ sys.path.append("TrainingNet")
 sys.path.append("TrainingLoss")
 import numpy as np
 import tensorflow as tf
-import utils.input_data
 import importlib
 import config
 import tensorflow.contrib.slim as slim
@@ -41,6 +40,8 @@ class trainFR():
         #3. load dataset
         self.inputdataset=fu.TFImageDataset(self.conf)
         self.traindata_iterator,self.traindata_next_element=self.inputdataset.load_image_dataset( buffer_size=20000 )
+        self.nrof_classes=self.inputdataset.nrof_classes
+        self.total_img_num=self.inputdataset.total_img_num
 
 
 
@@ -52,8 +53,8 @@ class trainFR():
 
         #3.load model and inference
         network = importlib.import_module(self.conf.fr_model_def)
-        print ("trianing net:%s"%self.conf.fr_model_def)
-        print ("input image size [h:%d w:%d c:%d]"%(self.conf.input_img_height,self.conf.input_img_width,3))
+        print ("training net:%s"%self.conf.fr_model_def)
+        print ("input image : height:%d width:%d channel:%d"%(self.conf.input_img_height,self.conf.input_img_width,3))
 
         self.prelogits = network.inference(
             self.images_input,
@@ -63,23 +64,34 @@ class trainFR():
             feature_length=self.conf.feature_length)
 
     def loss(self):
-        logits = slim.fully_connected(self.prelogits,
-                                      self.inputdataset.nrof_classes,
-                                      activation_fn=None,
-                                      weights_initializer=slim.initializers.xavier_initializer(),
-                                      weights_regularizer=slim.l2_regularizer(5e-4),
-                                      scope='Logits',
-                                      reuse=False)
-        softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=self.labels_input),name="loss")
+        #center loss
+        lossfunc=importlib.import_module("Centerloss")
+        self.logits = slim.fully_connected(self.prelogits,
+                                           self.nrof_classes,
+                                           activation_fn=None,
+                                           weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
+                                           weights_regularizer=slim.l2_regularizer(5e-5),
+                                           scope='Logits_end',
+                                           reuse=False)
+        #softmax loss
+        self.softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels_input),name="softmaxloss")
+        tf.add_to_collection('losses', self.softmaxloss)
+        #center loss
+        self.center_loss, centers_op = lossfunc.cal_loss(   self.prelogits, 
+                                                            self.labels_input, 
+                                                            self.nrof_classes,
+                                                            centrloss_alpha=self.conf.Centerloss_alpha,
+                                                            centerloss_lambda=self.conf.Centerloss_lambda)
+        tf.add_to_collection('losses', self.center_loss)
 
-        # Norm for the prelogits
-        eps = 1e-4
-        prelogits_norm = tf.reduce_mean(tf.norm(tf.abs(self.prelogits)+eps, ord=1, axis=1))
-        tf.add_to_collection('losses', prelogits_norm * 5e-4)
-        tf.add_to_collection('losses', softmaxloss)
+
+        custom_loss=tf.get_collection("losses")
+        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        self.total_loss=tf.add_n(custom_loss+regularization_losses,name='total_loss')
+
 
         embeddings = tf.nn.l2_normalize(self.prelogits, 1, 1e-10, name='embeddings')
-        self.predict_labels=tf.argmax(logits,1)
+        self.predict_labels=tf.argmax(self.logits,1)
 
         #adjust learning rate
         self.global_step = tf.Variable(0, trainable=False)
@@ -91,15 +103,12 @@ class trainFR():
                                                             staircase=True)
         elif self.conf.lr_type=='piecewise_constant':
             self.learning_rate = tf.train.piecewise_constant(self.global_step, 
-                                                             [ int(i*self.inputdataset.nrof_classes/self.conf.batch_size) for i in self.conf.boundaries], 
+                                                             [ int(i*self.total_img_num/self.conf.batch_size) for i in self.conf.boundaries], 
                                                              self.conf.values)
         elif self.conf.lr_type=='manual_modify':
             pass
-        print ("learning rate use %s"%self.conf.lr_type)
+        print ("lr stratege : %s"%self.conf.lr_type)
 
-        custom_loss=tf.get_collection("losses")
-        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-        self.total_loss=tf.add_n(custom_loss+regularization_losses,name='total_loss')
 
 
     def optimizer(self):
@@ -115,12 +124,21 @@ class trainFR():
             opt = tf.train.MomentumOptimizer(self.learning_rate, 0.9, use_nesterov=True)
         else:
             raise ValueError('Invalid optimization algorithm')
-        print ("optimizer use %s"%self.conf.optimizer)
+        print ("optimizer stratege: %s"%self.conf.optimizer)
 
         grads = opt.compute_gradients(self.total_loss)
-        update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+        update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)+tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
-            self.train_op = opt.apply_gradients(grads, global_step=self.global_step)
+            apply_gradient_op = opt.apply_gradients(grads, global_step=self.global_step)
+
+
+        variable_averages = tf.train.ExponentialMovingAverage(0.9999, self.global_step)
+        variables_averages_op = variable_averages.apply(tf.trainable_variables())
+
+        with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
+            self.train_op = tf.no_op(name='train')
+
+        return self.train_op
 
 
     def process(self):
@@ -139,20 +157,25 @@ class trainFR():
 
                         start_time=time.time()
                         input_dict={self.phase_train:True,self.images_input:images_train,self.labels_input:labels_train}
-                        step,lr,train_loss,_,pre_labels,real_labels = sess.run([self.global_step,
+
+                        _,step,lr,total_loss,center_loss,predict_labels,real_labels= sess.run([
+                                                                                self.train_op,
+                                                                                self.global_step,
                                                                                 self.learning_rate,
                                                                                 self.total_loss,
-                                                                                self.train_op,
+                                                                                self.center_loss,
                                                                                 self.predict_labels,
                                                                                 self.labels_input],
                                                                                 feed_dict=input_dict)
                         end_time=time.time()
                         use_time+=(end_time-start_time)
-                        train_acc=np.equal(pre_labels,real_labels).mean()
+                        train_acc=np.equal(predict_labels,real_labels).mean()
 
                         #display train result
                         if(step%self.conf.display_iter==0):
-                            print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch) )
+                            print ("step:%d lr:%f time:%.3f s total_loss:%.3f center_loss:%0.3f acc:%.3f epoch:%.3f"%
+                            (step,lr,use_time,total_loss,center_loss,train_acc,(self.conf.batch_size*step)/self.total_img_num ) )
+
                             use_time=0
                         
                         if (step%self.conf.test_save_iter==0):
