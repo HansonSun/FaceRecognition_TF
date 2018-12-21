@@ -1,11 +1,15 @@
-import tensorflow as tf
 from easydict import EasyDict as edict  
+import os
 
 def get_config( ):
     conf = edict()
     ##-----------------train process parameter-----------------------##
     #training dataset path list,if the input dataset is image dataset ,you needn't set the nrof_classes
     conf.training_dateset_path = "/home/hanson/dataset/VGGFACE2/train_fc_zoom_filter_130x130"
+    conf.use_tfrecord=0
+    if os.path.isdir(conf.training_dateset_path)==False and (conf.training_dateset_path.endswith("tfrecord") or conf.training_dateset_path.endswith("tfrecords") ):
+        conf.use_tfrecord=1
+    #conf
     conf.dataset_img_width=128
     conf.dataset_img_height=128
     ##-----------------finetune process parameter-----------------------------------##
@@ -13,13 +17,15 @@ def get_config( ):
     conf.finetune_model_dir="ToBeConvertModels"
     conf.finetune_nrof_classes=-1
 
-    conf.test_mode=0
+    conf.nrof_classes=8631  #the code can auto infernce from image dataset path
+    if conf.use_tfrecord and conf.nrof_classes==-1:
+        raise Exception("please set nrof_classes on config file for tfrecords dataset")
 
-    conf.nrof_classes=-1  #the code can auto infernce from dataset path
     conf.batch_size=120
     conf.display_iter=10
-    conf.test_save_iter=5000
-    conf.max_nrof_epochs=1000
+    conf.test_iter=5000
+    conf.save_iter=5000 
+    conf.max_nrof_epochs=20
     conf.fr_model_def="inception_resnet_v1"         #train facerecognize model
     conf.classification_model_def="vgg11"   #loss test model
     conf.feature_length=512 #feature output size
@@ -67,7 +73,7 @@ def get_config( ):
     learning_rate_decay_step=1000
     learning_rate_decay_rate=0.98
     #piecewise constant
-    conf.boundaries = [2,16,32] #the dataset epoch 
+    conf.boundaries = [20000,160000,320000] #the dataset epoch 
     conf.values     = [0.01, 0.01, 0.001,0.0001]  #the number means learning rate
     assert len(conf.values)-len(conf.boundaries)==1
     #manual_modify

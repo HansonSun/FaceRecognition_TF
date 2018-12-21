@@ -5,7 +5,7 @@ from __future__ import print_function
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import sys
-sys.path.append("/home/hanson/facetools")
+sys.path.append("/home/hanson/facetools/lib")
 sys.path.append("TrainingNet")
 sys.path.append("TrainingLoss")
 import numpy as np
@@ -41,7 +41,8 @@ class trainFR():
         #3. load dataset
         self.inputdataset=fu.TFImageDataset(self.conf)
         self.traindata_iterator,self.traindata_next_element=self.inputdataset.load_image_dataset( buffer_size=20000 )
-
+        self.nrof_classes=self.inputdataset.nrof_classes
+        self.total_img_num=self.inputdataset.total_img_num
 
 
     def make_model(self):
@@ -53,7 +54,7 @@ class trainFR():
         #3.load model and inference
         network = importlib.import_module(self.conf.fr_model_def)
         print ("trianing net:%s"%self.conf.fr_model_def)
-        print ("input image size [h:%d w:%d c:%d]"%(self.conf.input_img_height,self.conf.input_img_width,3))
+        print ("input image size height:%d width:%d channel:%d]"%(self.conf.input_img_height,self.conf.input_img_width,3))
 
         self.prelogits = network.inference(
             self.images_input,
@@ -61,6 +62,23 @@ class trainFR():
             phase_train=self.phase_train,
             weight_decay=self.conf.weight_decay,
             feature_length=self.conf.feature_length)
+
+    def summary(self):
+        #add grad histogram op
+        for grad, var in self.grads:
+            if grad is not None:
+                tf.summary.histogram(var.op.name + '/gradients', grad)
+
+        #add trainabel variable gradients
+        for var in tf.trainable_variables():
+            tf.summary.histogram(var.op.name, var)
+
+        #add loss summary
+        tf.summary.scalar("center_loss",self.cosface_loss)
+        tf.summary.scalar("center_loss",self.cosface_loss)
+        tf.summary.scalar("total_loss",self.total_loss)
+        tf.summary.scalar("learning_rate",self.learning_rate)
+        self.summary_op = tf.summary.merge_all()
 
     def loss(self):
         # Norm for the prelogits
@@ -117,10 +135,10 @@ class trainFR():
             raise ValueError('Invalid optimization algorithm')
         print ("optimizer use %s"%self.conf.optimizer)
 
-        grads = opt.compute_gradients(self.total_loss)
+        self.grads = opt.compute_gradients(self.total_loss)
         update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
         with tf.control_dependencies(update_ops):
-            self.train_op = opt.apply_gradients(grads, global_step=self.global_step)
+            self.train_op = opt.apply_gradients(self.grads, global_step=self.global_step)
 
 
     def process(self):
@@ -155,10 +173,11 @@ class trainFR():
                             print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%.3f"%(step,lr,use_time,train_loss,train_acc,(self.conf.batch_size*step)/self.total_img_num) )
                             use_time=0
                         
-                        if (step%self.conf.test_save_iter==0):
+                        if (self.conf.save_iter!=-1 and  step%self.conf.save_iter==0):
                             filename_cpkt = os.path.join(self.models_dir, "%d.ckpt"%step)
                             saver.save(sess, filename_cpkt)
                             
+                        if (self.conf.test_iter!=-1 and step%self.conf.test_iter==0):
                             if self.conf.benchmark_dict["test_lfw"] :
                                 acc_dict=test_benchmark(self.conf,self.models_dir)
 

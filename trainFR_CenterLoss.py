@@ -63,6 +63,23 @@ class trainFR():
             weight_decay=self.conf.weight_decay,
             feature_length=self.conf.feature_length)
 
+    def summary(self):
+        #add grad histogram op
+        for grad, var in self.grads:
+            if grad is not None:
+                tf.summary.histogram(var.op.name + '/gradients', grad)
+
+        #add trainabel variable gradients
+        for var in tf.trainable_variables():
+            tf.summary.histogram(var.op.name, var)
+
+        #add loss summary
+        tf.summary.scalar("center_loss",self.cosface_loss)
+        tf.summary.scalar("center_loss",self.cosface_loss)
+        tf.summary.scalar("total_loss",self.total_loss)
+        tf.summary.scalar("learning_rate",self.learning_rate)
+        self.summary_op = tf.summary.merge_all()
+
     def loss(self):
         #center loss
         lossfunc=importlib.import_module("Centerloss")
@@ -126,10 +143,10 @@ class trainFR():
             raise ValueError('Invalid optimization algorithm')
         print ("optimizer stratege: %s"%self.conf.optimizer)
 
-        grads = opt.compute_gradients(self.total_loss)
+        self.grads = opt.compute_gradients(self.total_loss)
         update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)+tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
-            apply_gradient_op = opt.apply_gradients(grads, global_step=self.global_step)
+            apply_gradient_op = opt.apply_gradients(self.grads, global_step=self.global_step)
 
 
         variable_averages = tf.train.ExponentialMovingAverage(0.9999, self.global_step)
@@ -178,10 +195,11 @@ class trainFR():
 
                             use_time=0
                         
-                        if (step%self.conf.test_save_iter==0):
+                        if (self.conf.test_iter==0 and step%self.conf.test_iter==0):
                             filename_cpkt = os.path.join(self.models_dir, "%d.ckpt"%step)
                             saver.save(sess, filename_cpkt)
-                            
+
+                        if (self.conf.save_iter==0 and step%self.conf.save_iter==0):
                             if self.conf.benchmark_dict["test_lfw"] :
                                 acc_dict=test_benchmark(self.conf,self.models_dir)
 

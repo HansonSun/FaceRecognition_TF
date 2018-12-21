@@ -61,6 +61,23 @@ class trainFR():
             weight_decay=self.conf.weight_decay,
             feature_length=self.conf.feature_length)
 
+    
+    def summary(self):
+        #add grad histogram op
+        for grad, var in self.grads:
+            if grad is not None:
+                tf.summary.histogram(var.op.name + '/gradients', grad)
+
+        #add trainabel variable gradients
+        for var in tf.trainable_variables():
+            tf.summary.histogram(var.op.name, var)
+
+        #add loss summary
+        tf.summary.scalar("cosface_loss",self.cosface_loss)
+        tf.summary.scalar("total_loss",self.total_loss)
+        tf.summary.scalar("learning_rate",self.learning_rate)
+        self.summary_op = tf.summary.merge_all()
+
     def loss(self):
         # Norm for the prelogits
         eps = 1e-4
@@ -69,8 +86,8 @@ class trainFR():
 
         #cosface loss
         lossfunc=importlib.import_module("LargeMarginCosine")
-        logits,custom_loss=lossfunc.cal_loss(self.prelogits,self.labels_input,self.nrof_classes)
-        tf.add_to_collection('losses', custom_loss)
+        logits,self.cosface_loss=lossfunc.cal_loss(self.prelogits,self.labels_input,self.nrof_classes)
+        tf.add_to_collection('losses', self.cosface_loss)
 
         custom_loss=tf.get_collection("losses")
         #regularization loss
@@ -114,10 +131,10 @@ class trainFR():
             raise ValueError('Invalid optimization algorithm')
         print ("optimizer use %s"%self.conf.optimizer)
 
-        grads = opt.compute_gradients(self.total_loss)
+        self.grads = opt.compute_gradients(self.total_loss)
         update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)+tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
-            apply_gradient_op = opt.apply_gradients(grads, global_step=self.global_step)
+            apply_gradient_op = opt.apply_gradients(self.grads, global_step=self.global_step)
         variable_averages = tf.train.ExponentialMovingAverage(0.9999, self.global_step)
         variables_averages_op = variable_averages.apply(tf.trainable_variables())
 
@@ -158,13 +175,13 @@ class trainFR():
                             print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%.3f"%(step,lr,use_time,train_loss,train_acc,(self.conf.batch_size*step)/self.total_img_num) )
                             use_time=0
                         
-                        if (step%self.conf.test_save_iter==0):
+                        if (self.conf.save_iter!=-1 and step%self.conf.save_iter==0):
                             filename_cpkt = os.path.join(self.models_dir, "%d.ckpt"%step)
                             saver.save(sess, filename_cpkt)
                             
+                        if (self.conf.test_iter!=-1 and step%self.conf.test_iter==0):
                             if self.conf.benchmark_dict["test_lfw"] :
                                 acc_dict=test_benchmark(self.conf,self.models_dir)
-
                                 if acc_dict["lfw_acc"]>self.conf.topn_threshold:
                                     self.topn_file.write("%s %s\n"%(os.path.join(self.topn_models_dir, "%d.ckpt"%step),str(acc_dict)) )
                                     shutil.copyfile(os.path.join(self.models_dir, "%d.ckpt.meta"%step),os.path.join(self.topn_models_dir, "%d.ckpt.meta"%step))

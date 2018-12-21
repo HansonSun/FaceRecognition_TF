@@ -18,6 +18,7 @@ from datetime import datetime
 from utils.benchmark_validate import *
 import shutil
 import faceutils as fu
+from  utils.input_dataset import TFRecordDataset
 
 
 
@@ -36,13 +37,17 @@ class trainFR():
         self.topn_models_dir = os.path.join("saved_models", subdir, "topn")#topn dir used for save top accuracy model
         if not os.path.isdir(self.topn_models_dir):  # Create the topn model directory if it doesn't exist
             os.makedirs(self.topn_models_dir)
-        self.topn_file=open(os.path.join(self.topn_models_dir,"topn_acc.txt"),"a+")
+        
         #3. load dataset
-        self.inputdataset=fu.TFImageDataset(self.conf)
-        self.traindata_iterator,self.traindata_next_element=self.inputdataset.load_image_dataset( buffer_size=20000 )
-        self.nrof_classes=self.inputdataset.nrof_classes
-        self.total_img_num=self.inputdataset.total_img_num
+        if self.conf.use_tfrecord:
+            self.inputdataset=TFRecordDataset(self.conf)
+        else:
+            self.inputdataset=fu.TFImageDataset(self.conf)
+            
+            
 
+        self.traindata_iterator,self.traindata_next_element=self.inputdataset.generateDataset( )
+        self.nrof_classes=self.inputdataset.nrof_classes
 
 
     def make_model(self):
@@ -53,8 +58,8 @@ class trainFR():
 
         #3.load model and inference
         network = importlib.import_module(self.conf.fr_model_def)
-        print ("trianing net:%s"%self.conf.fr_model_def)
-        print ("input image size [h:%d w:%d c:%d]"%(self.conf.input_img_height,self.conf.input_img_width,3))
+        print ("trianing network:%s"%self.conf.fr_model_def)
+        print ("input image [ height:%d width:%d channel:%d ]"%(self.conf.input_img_height,self.conf.input_img_width,3))
 
         self.prelogits = network.inference(
             self.images_input,
@@ -62,6 +67,24 @@ class trainFR():
             phase_train=self.phase_train,
             weight_decay=self.conf.weight_decay,
             feature_length=self.conf.feature_length)
+    
+    def summary(self):
+
+        #add grad histogram op
+        for grad, var in self.grads:
+            if grad is not None:
+                tf.summary.histogram(var.op.name + '/gradients', grad)
+
+        #add trainabel variable gradients
+        for var in tf.trainable_variables():
+            tf.summary.histogram(var.op.name, var)
+
+        #add loss summary
+        tf.summary.scalar("softmax_loss",self.softmaxloss)
+        tf.summary.scalar("total_loss",self.total_loss)
+        tf.summary.scalar("learning_rate",self.learning_rate)
+
+        self.summary_op = tf.summary.merge_all()
 
     def loss(self):
         logits = slim.fully_connected(self.prelogits,
@@ -71,13 +94,19 @@ class trainFR():
                                       weights_regularizer=slim.l2_regularizer(5e-4),
                                       scope='Logits',
                                       reuse=False)
-        softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=self.labels_input),name="loss")
+        self.softmaxloss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=self.labels_input),name="loss")
 
         # Norm for the prelogits
         eps = 1e-4
         prelogits_norm = tf.reduce_mean(tf.norm(tf.abs(self.prelogits)+eps, ord=1, axis=1))
         tf.add_to_collection('losses', prelogits_norm * 5e-4)
-        tf.add_to_collection('losses', softmaxloss)
+        tf.add_to_collection('losses', self.softmaxloss)
+
+        custom_loss=tf.get_collection("losses")
+        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        self.total_loss=tf.add_n(custom_loss+regularization_losses,name='total_loss')
+
+
 
         embeddings = tf.nn.l2_normalize(self.prelogits, 1, 1e-10, name='embeddings')
         self.predict_labels=tf.argmax(logits,1)
@@ -91,16 +120,12 @@ class trainFR():
                                                             self.conf.learning_rate_decay_rate,
                                                             staircase=True)
         elif self.conf.lr_type=='piecewise_constant':
-            self.learning_rate = tf.train.piecewise_constant(self.global_step, 
-                                                             [ int(i*self.total_img_num/self.conf.batch_size) for i in self.conf.boundaries], 
-                                                             self.conf.values)
+            self.learning_rate = tf.train.piecewise_constant(self.global_step, self.conf.boundaries, self.conf.values)
         elif self.conf.lr_type=='manual_modify':
             pass
-        print ("learning rate use %s"%self.conf.lr_type)
 
-        custom_loss=tf.get_collection("losses")
-        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-        self.total_loss=tf.add_n(custom_loss+regularization_losses,name='total_loss')
+
+        print ("lr stratege : %s"%self.conf.lr_type)
 
 
     def optimizer(self):
@@ -116,12 +141,12 @@ class trainFR():
             opt = tf.train.MomentumOptimizer(self.learning_rate, 0.9, use_nesterov=True)
         else:
             raise ValueError('Invalid optimization algorithm')
-        print ("optimizer use %s"%self.conf.optimizer)
+        print ("optimizer stratege : %s"%self.conf.optimizer)
 
-        grads = opt.compute_gradients(self.total_loss)
+        self.grads = opt.compute_gradients(self.total_loss)
         update_ops = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)+tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
-            apply_gradient_op = opt.apply_gradients(grads, global_step=self.global_step)
+            apply_gradient_op = opt.apply_gradients(self.grads, global_step=self.global_step)
 
 
         variable_averages = tf.train.ExponentialMovingAverage(0.9999, self.global_step)
@@ -134,46 +159,45 @@ class trainFR():
 
 
     def process(self):
-        saver=tf.train.Saver(tf.trainable_variables(),max_to_keep=3)
+        saver=tf.train.Saver(tf.trainable_variables(),max_to_keep=2)
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
+            summary_writer=tf.summary.FileWriter(self.logs_dir,sess.graph)
 
             for epoch in range(self.conf.max_nrof_epochs):
                 sess.run(self.traindata_iterator.initializer)
                 while True:
                     use_time=0
                     try:
-                        images_train, labels_train = sess.run(self.traindata_next_element)
-
                         start_time=time.time()
+                        images_train, labels_train = sess.run(self.traindata_next_element)
+                        
                         input_dict={self.phase_train:True,self.images_input:images_train,self.labels_input:labels_train}
-                        step,lr,train_loss,_,pre_labels,real_labels = sess.run([self.global_step,
-                                                                                self.learning_rate,
-                                                                                self.total_loss,
-                                                                                self.train_op,
-                                                                                self.predict_labels,
-                                                                                self.labels_input],
-                                                                                feed_dict=input_dict)
+                        result_op=[self.train_op,self.global_step,self.learning_rate,self.total_loss,self.predict_labels,self.labels_input]
+                        _,step,lr,train_loss,predict_labels,real_labels ,summary_str= sess.run(result_op+[self.summary_op],feed_dict=input_dict)
+                        summary_writer.add_summary(summary_str, global_step=step)
                         end_time=time.time()
                         use_time+=(end_time-start_time)
-                        train_acc=np.equal(pre_labels,real_labels).mean()
+                        train_acc=np.equal(predict_labels,real_labels).mean()
 
                         #display train result
                         if(step%self.conf.display_iter==0):
                             print ("step:%d lr:%f time:%.3f s total_loss:%.3f acc:%.3f epoch:%d"%(step,lr,use_time,train_loss,train_acc,epoch) )
                             use_time=0
                         
-                        if (step%self.conf.test_save_iter==0):
+                        if (self.conf.save_iter!=-1 and step%self.conf.save_iter==0):
+                            print ("save checkpoint")
                             filename_cpkt = os.path.join(self.models_dir, "%d.ckpt"%step)
                             saver.save(sess, filename_cpkt)
-                            
+
+                        if (self.conf.test_iter!=-1 and step%self.conf.test_iter==0):
                             if self.conf.benchmark_dict["test_lfw"] :
                                 acc_dict=test_benchmark(self.conf,self.models_dir)
-
                                 if acc_dict["lfw_acc"]>self.conf.topn_threshold:
-                                    self.topn_file.write("%s %s\n"%(os.path.join(self.topn_models_dir, "%d.ckpt"%step),str(acc_dict)) )
+                                    with open(os.path.join(self.logs_dir,"topn_acc.txt"),"a+") as topn_file:
+                                        topn_file.write("%s %s\n"%(os.path.join(self.topn_models_dir, "%d.ckpt"%step),str(acc_dict)) )
                                     shutil.copyfile(os.path.join(self.models_dir, "%d.ckpt.meta"%step),os.path.join(self.topn_models_dir, "%d.ckpt.meta"%step))
                                     shutil.copyfile(os.path.join(self.models_dir, "%d.ckpt.index"%step),os.path.join(self.topn_models_dir, "%d.ckpt.index"%step))
                                     shutil.copyfile(os.path.join(self.models_dir, "%d.ckpt.data-00000-of-00001"%step),os.path.join(self.topn_models_dir, "%d.ckpt.data-00000-of-00001"%step))
@@ -186,6 +210,7 @@ class trainFR():
         self.make_model()
         self.loss()
         self.optimizer()
+        self.summary()
         self.process()
 
 
